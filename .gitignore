@@ -1,39 +1,19 @@
-# dependencies
-node_modules/
+# Xcode
+DerivedData/
+build/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
 
-# Expo
-.expo/
-dist/
-web-build/
-expo-env.d.ts
-
-# Native
-.kotlin/
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
-
-# Metro
-.metro-health-check*
-
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
+# Swift Package Manager
+.build/
+.swiftpm/
 
 # macOS
 .DS_Store
-*.pem
 
-# local env files
-.env*.local
-
-# TypeScript
-*.tsbuildinfo
-
-# generated native folders
-/ios
-/android
+# Local configuration
+*.xcconfig.local
+*.env
+*.env.*

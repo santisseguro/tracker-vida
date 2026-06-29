@@ -1,62 +1,42 @@
 # Tracker Vida
 
-Private personal life-organization mobile app built with Expo, React Native, TypeScript, and Expo Router.
+Private personal iPhone app for life organization, now built as a native iOS SwiftUI project.
 
 ## Current Status
 
-The project currently contains the mobile app foundation only:
+The project contains a native SwiftUI foundation only:
 
-- Expo app setup.
-- Expo Router tab navigation.
-- Placeholder screens for Dashboard, Gym / Health, University, Money, and Settings.
-- Basic reusable UI components.
+- SwiftUI app shell with tabs for Dashboard, Gym / Health, University, Money, and Settings.
+- Swift domain models for the v1 product areas.
+- Static mock data for visual development.
+- Reusable SwiftUI presentation components.
 
-Product features, Supabase, AI, and Apple Health integrations are intentionally not implemented yet.
+Supabase, real AI calls, HealthKit, persistence, and create/edit/delete workflows are intentionally not implemented yet.
 
-## Run Locally
+## Open In Xcode
 
-Install dependencies:
+Open the project:
 
 ```bash
-npm install
+open TrackerVida.xcodeproj
 ```
 
-Start the Expo development server:
+Then in Xcode:
+
+1. Select the `TrackerVida` scheme.
+2. Select an iPhone simulator or a connected iPhone.
+3. Press `Run`.
+
+## Command-Line Build
+
+When full Xcode is installed and selected:
 
 ```bash
-npm start
+xcodebuild -project TrackerVida.xcodeproj -scheme TrackerVida -destination 'platform=iOS Simulator,name=iPhone 16' build
 ```
 
-Run on a target:
+If `xcodebuild` reports that Command Line Tools are active, select full Xcode first:
 
 ```bash
-npm run ios
-npm run android
-npm run web
-```
-
-## Checks
-
-Run TypeScript:
-
-```bash
-npm run typecheck
-```
-
-Run lint:
-
-```bash
-npm run lint
-```
-
-Check formatting:
-
-```bash
-npm run format:check
-```
-
-Format files:
-
-```bash
-npm run format
+sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 ```

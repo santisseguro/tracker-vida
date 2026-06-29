@@ -1,0 +1,225 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A00000000000000000000101 /* TrackerVidaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000201 /* TrackerVidaApp.swift */; };
+		A00000000000000000000102 /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000202 /* RootTabView.swift */; };
+		A00000000000000000000103 /* SharedModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000203 /* SharedModels.swift */; };
+		A00000000000000000000104 /* GymHealthModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000204 /* GymHealthModels.swift */; };
+		A00000000000000000000105 /* UniversityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000205 /* UniversityModels.swift */; };
+		A00000000000000000000106 /* MoneyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000206 /* MoneyModels.swift */; };
+		A00000000000000000000107 /* DashboardModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000207 /* DashboardModels.swift */; };
+		A00000000000000000000108 /* DailyOrderModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000208 /* DailyOrderModels.swift */; };
+		A00000000000000000000109 /* MockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000209 /* MockData.swift */; };
+		A0000000000000000000010A /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000020A /* AppTheme.swift */; };
+		A0000000000000000000010B /* AppCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000020B /* AppCard.swift */; };
+		A0000000000000000000010C /* StatusPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000020C /* StatusPill.swift */; };
+		A0000000000000000000010D /* MetricTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000020D /* MetricTile.swift */; };
+		A0000000000000000000010E /* InfoRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000020E /* InfoRow.swift */; };
+		A0000000000000000000010F /* ScreenScaffold.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000020F /* ScreenScaffold.swift */; };
+		A00000000000000000000110 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000210 /* DashboardView.swift */; };
+		A00000000000000000000111 /* GymHealthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000211 /* GymHealthView.swift */; };
+		A00000000000000000000112 /* UniversityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000212 /* UniversityView.swift */; };
+		A00000000000000000000113 /* MoneyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000213 /* MoneyView.swift */; };
+		A00000000000000000000114 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000214 /* SettingsView.swift */; };
+		A00000000000000000000115 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000215 /* Assets.xcassets */; };
+		A00000000000000000000116 /* DomainModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000216 /* DomainModelTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A00000000000000000000301 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A00000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A00000000000000000000401;
+			remoteInfo = TrackerVida;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		A00000000000000000000201 /* TrackerVidaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackerVidaApp.swift; sourceTree = "<group>"; };
+		A00000000000000000000202 /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
+		A00000000000000000000203 /* SharedModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedModels.swift; sourceTree = "<group>"; };
+		A00000000000000000000204 /* GymHealthModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymHealthModels.swift; sourceTree = "<group>"; };
+		A00000000000000000000205 /* UniversityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversityModels.swift; sourceTree = "<group>"; };
+		A00000000000000000000206 /* MoneyModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoneyModels.swift; sourceTree = "<group>"; };
+		A00000000000000000000207 /* DashboardModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardModels.swift; sourceTree = "<group>"; };
+		A00000000000000000000208 /* DailyOrderModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyOrderModels.swift; sourceTree = "<group>"; };
+		A00000000000000000000209 /* MockData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockData.swift; sourceTree = "<group>"; };
+		A0000000000000000000020A /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
+		A0000000000000000000020B /* AppCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCard.swift; sourceTree = "<group>"; };
+		A0000000000000000000020C /* StatusPill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusPill.swift; sourceTree = "<group>"; };
+		A0000000000000000000020D /* MetricTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricTile.swift; sourceTree = "<group>"; };
+		A0000000000000000000020E /* InfoRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoRow.swift; sourceTree = "<group>"; };
+		A0000000000000000000020F /* ScreenScaffold.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenScaffold.swift; sourceTree = "<group>"; };
+		A00000000000000000000210 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		A00000000000000000000211 /* GymHealthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymHealthView.swift; sourceTree = "<group>"; };
+		A00000000000000000000212 /* UniversityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversityView.swift; sourceTree = "<group>"; };
+		A00000000000000000000213 /* MoneyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoneyView.swift; sourceTree = "<group>"; };
+		A00000000000000000000214 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A00000000000000000000215 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A00000000000000000000216 /* DomainModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainModelTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000217 /* TrackerVida.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TrackerVida.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A00000000000000000000218 /* TrackerVidaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TrackerVidaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A00000000000000000000501 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A00000000000000000000502 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A00000000000000000000601 = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000602 /* TrackerVida */,
+				A00000000000000000000610 /* TrackerVidaTests */,
+				A00000000000000000000620 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A00000000000000000000602 /* TrackerVida */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000603 /* App */,
+				A00000000000000000000604 /* Domain */,
+				A00000000000000000000605 /* Mock */,
+				A00000000000000000000606 /* Shared */,
+				A00000000000000000000607 /* Features */,
+				A00000000000000000000215 /* Assets.xcassets */,
+			);
+			path = TrackerVida;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000603 /* App */ = {isa = PBXGroup; children = (A00000000000000000000201, A00000000000000000000202); path = App; sourceTree = "<group>"; };
+		A00000000000000000000604 /* Domain */ = {isa = PBXGroup; children = (A00000000000000000000203, A00000000000000000000204, A00000000000000000000205, A00000000000000000000206, A00000000000000000000207, A00000000000000000000208); path = Domain; sourceTree = "<group>"; };
+		A00000000000000000000605 /* Mock */ = {isa = PBXGroup; children = (A00000000000000000000209); path = Mock; sourceTree = "<group>"; };
+		A00000000000000000000606 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000608 /* Theme */,
+				A00000000000000000000609 /* Components */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000608 /* Theme */ = {isa = PBXGroup; children = (A0000000000000000000020A); path = Theme; sourceTree = "<group>"; };
+		A00000000000000000000609 /* Components */ = {isa = PBXGroup; children = (A0000000000000000000020B, A0000000000000000000020C, A0000000000000000000020D, A0000000000000000000020E, A0000000000000000000020F); path = Components; sourceTree = "<group>"; };
+		A00000000000000000000607 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000611 /* Dashboard */,
+				A00000000000000000000612 /* GymHealth */,
+				A00000000000000000000613 /* University */,
+				A00000000000000000000614 /* Money */,
+				A00000000000000000000615 /* Settings */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000611 /* Dashboard */ = {isa = PBXGroup; children = (A00000000000000000000210); path = Dashboard; sourceTree = "<group>"; };
+		A00000000000000000000612 /* GymHealth */ = {isa = PBXGroup; children = (A00000000000000000000211); path = GymHealth; sourceTree = "<group>"; };
+		A00000000000000000000613 /* University */ = {isa = PBXGroup; children = (A00000000000000000000212); path = University; sourceTree = "<group>"; };
+		A00000000000000000000614 /* Money */ = {isa = PBXGroup; children = (A00000000000000000000213); path = Money; sourceTree = "<group>"; };
+		A00000000000000000000615 /* Settings */ = {isa = PBXGroup; children = (A00000000000000000000214); path = Settings; sourceTree = "<group>"; };
+		A00000000000000000000610 /* TrackerVidaTests */ = {isa = PBXGroup; children = (A00000000000000000000216); path = TrackerVidaTests; sourceTree = "<group>"; };
+		A00000000000000000000620 /* Products */ = {isa = PBXGroup; children = (A00000000000000000000217, A00000000000000000000218); name = Products; sourceTree = "<group>"; };
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A00000000000000000000401 /* TrackerVida */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A00000000000000000000701 /* Build configuration list for PBXNativeTarget "TrackerVida" */;
+			buildPhases = (A00000000000000000000511, A00000000000000000000501, A00000000000000000000521);
+			buildRules = ();
+			dependencies = ();
+			name = TrackerVida;
+			productName = TrackerVida;
+			productReference = A00000000000000000000217 /* TrackerVida.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A00000000000000000000402 /* TrackerVidaTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A00000000000000000000702 /* Build configuration list for PBXNativeTarget "TrackerVidaTests" */;
+			buildPhases = (A00000000000000000000512, A00000000000000000000502, A00000000000000000000522);
+			buildRules = ();
+			dependencies = (A00000000000000000000302 /* PBXTargetDependency */);
+			name = TrackerVidaTests;
+			productName = TrackerVidaTests;
+			productReference = A00000000000000000000218 /* TrackerVidaTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A00000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					A00000000000000000000401 = {CreatedOnToolsVersion = 16.0;};
+					A00000000000000000000402 = {CreatedOnToolsVersion = 16.0; TestTargetID = A00000000000000000000401;};
+				};
+			};
+			buildConfigurationList = A00000000000000000000700 /* Build configuration list for PBXProject "TrackerVida" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (en, Base);
+			mainGroup = A00000000000000000000601;
+			productRefGroup = A00000000000000000000620 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (A00000000000000000000401, A00000000000000000000402);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A00000000000000000000521 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000115); runOnlyForDeploymentPostprocessing = 0; };
+		A00000000000000000000522 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A00000000000000000000511 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A00000000000000000000101, A00000000000000000000102, A00000000000000000000103, A00000000000000000000104,
+				A00000000000000000000105, A00000000000000000000106, A00000000000000000000107, A00000000000000000000108,
+				A00000000000000000000109, A0000000000000000000010A, A0000000000000000000010B, A0000000000000000000010C,
+				A0000000000000000000010D, A0000000000000000000010E, A0000000000000000000010F, A00000000000000000000110,
+				A00000000000000000000111, A00000000000000000000112, A00000000000000000000113, A00000000000000000000114,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A00000000000000000000512 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000116); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A00000000000000000000302 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = A00000000000000000000401 /* TrackerVida */; targetProxy = A00000000000000000000301 /* PBXContainerItemProxy */; };
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		A00000000000000000000801 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ANALYZER_NONNULL = YES; CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE; CLANG_CXX_LANGUAGE_STANDARD = "gnu++20"; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; CLANG_ENABLE_OBJC_WEAK = YES; CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES; CLANG_WARN_BOOL_CONVERSION = YES; CLANG_WARN_COMMA = YES; CLANG_WARN_CONSTANT_CONVERSION = YES; CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES; CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR; CLANG_WARN_DOCUMENTATION_COMMENTS = YES; CLANG_WARN_EMPTY_BODY = YES; CLANG_WARN_ENUM_CONVERSION = YES; CLANG_WARN_INFINITE_RECURSION = YES; CLANG_WARN_INT_CONVERSION = YES; CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES; CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES; CLANG_WARN_OBJC_LITERAL_CONVERSION = YES; CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR; CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES; CLANG_WARN_RANGE_LOOP_ANALYSIS = YES; CLANG_WARN_STRICT_PROTOTYPES = YES; CLANG_WARN_SUSPICIOUS_MOVE = YES; CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE; CLANG_WARN_UNREACHABLE_CODE = YES; CLANG_WARN__DUPLICATE_METHOD_MATCH = YES; COPY_PHASE_STRIP = NO; DEBUG_INFORMATION_FORMAT = dwarf; ENABLE_STRICT_OBJC_MSGSEND = YES; ENABLE_TESTABILITY = YES; GCC_C_LANGUAGE_STANDARD = gnu17; GCC_DYNAMIC_NO_PIC = NO; GCC_NO_COMMON_BLOCKS = YES; GCC_OPTIMIZATION_LEVEL = 0; GCC_PREPROCESSOR_DEFINITIONS = ("DEBUG=1", "$(inherited)"); GCC_WARN_64_TO_32_BIT_CONVERSION = YES; GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR; GCC_WARN_UNDECLARED_SELECTOR = YES; GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE; GCC_WARN_UNUSED_FUNCTION = YES; GCC_WARN_UNUSED_VARIABLE = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE; MTL_FAST_MATH = YES; ONLY_ACTIVE_ARCH = YES; SDKROOT = iphoneos; SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; }; name = Debug; };
+		A00000000000000000000802 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ANALYZER_NONNULL = YES; CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE; CLANG_CXX_LANGUAGE_STANDARD = "gnu++20"; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; CLANG_ENABLE_OBJC_WEAK = YES; CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES; CLANG_WARN_BOOL_CONVERSION = YES; CLANG_WARN_COMMA = YES; CLANG_WARN_CONSTANT_CONVERSION = YES; CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES; CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR; CLANG_WARN_DOCUMENTATION_COMMENTS = YES; CLANG_WARN_EMPTY_BODY = YES; CLANG_WARN_ENUM_CONVERSION = YES; CLANG_WARN_INFINITE_RECURSION = YES; CLANG_WARN_INT_CONVERSION = YES; CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES; CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES; CLANG_WARN_OBJC_LITERAL_CONVERSION = YES; CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR; CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES; CLANG_WARN_RANGE_LOOP_ANALYSIS = YES; CLANG_WARN_STRICT_PROTOTYPES = YES; CLANG_WARN_SUSPICIOUS_MOVE = YES; CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE; CLANG_WARN_UNREACHABLE_CODE = YES; CLANG_WARN__DUPLICATE_METHOD_MATCH = YES; COPY_PHASE_STRIP = NO; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; ENABLE_NS_ASSERTIONS = NO; ENABLE_STRICT_OBJC_MSGSEND = YES; GCC_C_LANGUAGE_STANDARD = gnu17; GCC_NO_COMMON_BLOCKS = YES; GCC_WARN_64_TO_32_BIT_CONVERSION = YES; GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR; GCC_WARN_UNDECLARED_SELECTOR = YES; GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE; GCC_WARN_UNUSED_FUNCTION = YES; GCC_WARN_UNUSED_VARIABLE = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; MTL_ENABLE_DEBUG_INFO = NO; MTL_FAST_MATH = YES; SDKROOT = iphoneos; SWIFT_COMPILATION_MODE = wholemodule; VALIDATE_PRODUCT = YES; }; name = Release; };
+		A00000000000000000000803 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = ""; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = "Tracker Vida"; INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity"; INFOPLIST_KEY_UILaunchScreen_Generation = YES; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait"; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = com.santisseguro.TrackerVida; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1; }; name = Debug; };
+		A00000000000000000000804 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = ""; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = "Tracker Vida"; INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity"; INFOPLIST_KEY_UILaunchScreen_Generation = YES; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait"; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = com.santisseguro.TrackerVida; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1; }; name = Release; };
+		A00000000000000000000805 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {BUNDLE_LOADER = "$(TEST_HOST)"; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = ""; GENERATE_INFOPLIST_FILE = YES; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = com.santisseguro.TrackerVidaTests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TrackerVida.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TrackerVida"; }; name = Debug; };
+		A00000000000000000000806 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {BUNDLE_LOADER = "$(TEST_HOST)"; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = ""; GENERATE_INFOPLIST_FILE = YES; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = com.santisseguro.TrackerVidaTests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TrackerVida.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TrackerVida"; }; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A00000000000000000000700 /* Build configuration list for PBXProject "TrackerVida" */ = {isa = XCConfigurationList; buildConfigurations = (A00000000000000000000801, A00000000000000000000802); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		A00000000000000000000701 /* Build configuration list for PBXNativeTarget "TrackerVida" */ = {isa = XCConfigurationList; buildConfigurations = (A00000000000000000000803, A00000000000000000000804); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		A00000000000000000000702 /* Build configuration list for PBXNativeTarget "TrackerVidaTests" */ = {isa = XCConfigurationList; buildConfigurations = (A00000000000000000000805, A00000000000000000000806); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+	};
+	rootObject = A00000000000000000000001 /* Project object */;
+}
