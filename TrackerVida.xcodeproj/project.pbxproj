@@ -29,6 +29,7 @@
 		A00000000000000000000114 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000214 /* SettingsView.swift */; };
 		A00000000000000000000115 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000215 /* Assets.xcassets */; };
 		A00000000000000000000116 /* DomainModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000216 /* DomainModelTests.swift */; };
+		A00000000000000000000117 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000219 /* AppStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -66,6 +67,7 @@
 		A00000000000000000000216 /* DomainModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainModelTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000217 /* TrackerVida.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TrackerVida.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000218 /* TrackerVidaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TrackerVidaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A00000000000000000000219 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -89,6 +91,7 @@
 				A00000000000000000000603 /* App */,
 				A00000000000000000000604 /* Domain */,
 				A00000000000000000000605 /* Mock */,
+				A00000000000000000000616 /* State */,
 				A00000000000000000000606 /* Shared */,
 				A00000000000000000000607 /* Features */,
 				A00000000000000000000215 /* Assets.xcassets */,
@@ -99,6 +102,7 @@
 		A00000000000000000000603 /* App */ = {isa = PBXGroup; children = (A00000000000000000000201, A00000000000000000000202); path = App; sourceTree = "<group>"; };
 		A00000000000000000000604 /* Domain */ = {isa = PBXGroup; children = (A00000000000000000000203, A00000000000000000000204, A00000000000000000000205, A00000000000000000000206, A00000000000000000000207, A00000000000000000000208); path = Domain; sourceTree = "<group>"; };
 		A00000000000000000000605 /* Mock */ = {isa = PBXGroup; children = (A00000000000000000000209); path = Mock; sourceTree = "<group>"; };
+		A00000000000000000000616 /* State */ = {isa = PBXGroup; children = (A00000000000000000000219); path = State; sourceTree = "<group>"; };
 		A00000000000000000000606 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
@@ -196,6 +200,7 @@
 				A00000000000000000000109, A0000000000000000000010A, A0000000000000000000010B, A0000000000000000000010C,
 				A0000000000000000000010D, A0000000000000000000010E, A0000000000000000000010F, A00000000000000000000110,
 				A00000000000000000000111, A00000000000000000000112, A00000000000000000000113, A00000000000000000000114,
+				A00000000000000000000117,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

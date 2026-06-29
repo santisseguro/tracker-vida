@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @EnvironmentObject private var store: AppStore
+
     var body: some View {
         ScreenScaffold(
             title: "Configuration",
@@ -32,7 +34,7 @@ struct SettingsView: View {
                 Text("Configuration sections")
                     .font(.headline.weight(.bold))
 
-                ForEach(MockData.settingsSections) { section in
+                ForEach(store.settingsSections) { section in
                     InfoRow(title: section.title, detail: section.detail, value: section.value, symbol: "switch.2", tint: AppTheme.Colors.primary)
                 }
             }

@@ -1,8 +1,10 @@
 import SwiftUI
 
 struct DashboardView: View {
-    private var latestWeight: WeightLog? { MockData.weightLogs.latest }
-    private var todayHealth: DailyHealthLog? { MockData.dailyHealthLogs.last }
+    @EnvironmentObject private var store: AppStore
+
+    private var state: DashboardViewState { store.dashboardState }
+    private var dailyOrdersState: DailyOrdersViewState { store.dailyOrdersState }
 
     var body: some View {
         ScreenScaffold(
@@ -13,19 +15,19 @@ struct DashboardView: View {
                 HStack(alignment: .top) {
                     StatusPill(text: "Mock AI order", tint: AppTheme.Colors.ai)
                     Spacer()
-                    Text("\(completedDailyItems)/\(totalDailyItems)")
+                    Text("\(dailyOrdersState.completedItems)/\(dailyOrdersState.totalItems)")
                         .font(.headline.weight(.bold))
                         .foregroundStyle(AppTheme.Colors.ai)
                 }
 
                 Text("Move with intention.")
                     .font(.title.weight(.bold))
-                Text(MockData.dailyOrderPlan.summary ?? "Static daily order preview.")
+                Text(state.dailyOrderPlan.summary ?? "Static daily order preview.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineSpacing(2)
 
-                ProgressView(value: MockData.dailyOrderPlan.completionRatio)
+                ProgressView(value: state.dailyOrderPlan.completionRatio)
                     .tint(AppTheme.Colors.ai)
             }
 
@@ -36,24 +38,24 @@ struct DashboardView: View {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 18) {
                     MetricTile(
                         title: "Gym",
-                        value: "\(MockData.dailyHealthLogs.gymAttendanceCount)/5",
+                        value: "\(state.weeklyGymCount)/5",
                         detail: "weekly target",
                         tint: AppTheme.Colors.health,
-                        progress: Double(MockData.dailyHealthLogs.gymAttendanceCount) / 5
+                        progress: Double(state.weeklyGymCount) / 5
                     )
                     MetricTile(
                         title: "Weight",
-                        value: "\(latestWeight?.weightKg.formatted(.number.precision(.fractionLength(1))) ?? "--") kg",
-                        detail: "goal \(MockData.weightGoal.targetWeightKg.formatted(.number.precision(.fractionLength(0)))) kg",
+                        value: "\(state.latestWeight?.weightKg.formatted(.number.precision(.fractionLength(1))) ?? "--") kg",
+                        detail: "goal \(state.weightGoal.targetWeightKg.formatted(.number.precision(.fractionLength(0)))) kg",
                         tint: AppTheme.Colors.primary,
                         progress: 0.58
                     )
                     MetricTile(
                         title: "Calories",
-                        value: "\(todayHealth?.totalCalories ?? 0)",
+                        value: "\(state.todayHealth?.totalCalories ?? 0)",
                         detail: "today",
                         tint: AppTheme.Colors.warning,
-                        progress: Double(todayHealth?.totalCalories ?? 0) / 2300
+                        progress: Double(state.todayHealth?.totalCalories ?? 0) / 2300
                     )
                     MetricTile(
                         title: "Money",
@@ -70,50 +72,47 @@ struct DashboardView: View {
                     Text("Focus stack")
                         .font(.headline.weight(.bold))
                     Spacer()
-                    StatusPill(text: "2 critical", tint: AppTheme.Colors.university)
+                    StatusPill(text: "\(state.activeCriticalTasks.count) critical", tint: AppTheme.Colors.university)
                 }
 
-                ForEach(MockData.criticalTasks) { task in
+                ForEach(state.activeCriticalTasks) { task in
                     InfoRow(
                         title: task.title,
-                        detail: task.type.rawValue,
-                        value: task.priority.rawValue.capitalized,
+                        detail: task.category.rawValue,
+                        value: task.priority.rawValue,
                         symbol: "exclamationmark.circle.fill",
                         tint: AppTheme.Colors.university
                     )
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        store.markAcademicTaskCompleted(task.id)
+                    }
                 }
 
                 Divider()
 
-                ForEach(MockData.upcomingDeadlines.prefix(2)) { task in
+                ForEach(state.upcomingDeadlines.prefix(2)) { task in
                     InfoRow(
                         title: task.title,
-                        detail: task.type.rawValue,
+                        detail: task.category.rawValue,
                         value: task.dueDate?.formatted(date: .abbreviated, time: .omitted),
                         symbol: "calendar",
                         tint: AppTheme.Colors.primary
                     )
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        store.markAcademicTaskCompleted(task.id)
+                    }
                 }
             }
 
             AppCard(compact: true) {
                 Text("Money snapshot")
                     .font(.headline.weight(.bold))
-                ForEach(MockData.accountBalances) { balance in
+                ForEach(state.accountBalances) { balance in
                     InfoRow(title: balance.title, detail: balance.detail, value: balance.value, symbol: "wallet.pass.fill", tint: AppTheme.Colors.money)
                 }
             }
         }
-    }
-
-    private var totalDailyItems: Int {
-        MockData.dailyOrderPlan.orders.flatMap(\.checklist).count
-    }
-
-    private var completedDailyItems: Int {
-        MockData.dailyOrderPlan.orders
-            .flatMap(\.checklist)
-            .filter { $0.status == .done || $0.status == .skipped }
-            .count
     }
 }

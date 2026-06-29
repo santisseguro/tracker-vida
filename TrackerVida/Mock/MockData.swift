@@ -35,8 +35,8 @@ enum MockData {
 
     static let dailyHealthLogs: [DailyHealthLog] = [
         DailyHealthLog(metadata: BaseMetadata(), date: makeDate(year: 2026, month: 6, day: 23), totalCalories: 2380, gymAttended: true, workoutDurationMinutes: 58, workoutType: .push, sleepHours: 7.1, sleepQuality: .good, source: healthSource),
-        DailyHealthLog(metadata: BaseMetadata(), date: makeDate(year: 2026, month: 6, day: 24), totalCalories: 2210, gymAttended: true, workoutDurationMinutes: 50, workoutType: .pull, sleepHours: 6.4, sleepQuality: .fair, source: healthSource),
-        DailyHealthLog(metadata: BaseMetadata(), date: makeDate(year: 2026, month: 6, day: 25), totalCalories: 2490, gymAttended: false, sleepHours: 7.8, sleepQuality: .great, source: healthSource),
+        DailyHealthLog(metadata: BaseMetadata(), date: makeDate(year: 2026, month: 6, day: 24), totalCalories: 2210, gymAttended: true, workoutDurationMinutes: 50, workoutType: .pull, sleepHours: 6.4, sleepQuality: .normal, source: healthSource),
+        DailyHealthLog(metadata: BaseMetadata(), date: makeDate(year: 2026, month: 6, day: 25), totalCalories: 2490, gymAttended: false, sleepHours: 7.8, sleepQuality: .good, source: healthSource),
         DailyHealthLog(metadata: BaseMetadata(), date: makeDate(year: 2026, month: 6, day: 26), totalCalories: 2320, gymAttended: true, workoutDurationMinutes: 62, workoutType: .legs, sleepHours: 6.9, sleepQuality: .good, source: healthSource),
         DailyHealthLog(metadata: BaseMetadata(), date: makeDate(year: 2026, month: 6, day: 27), totalCalories: 2550, gymAttended: true, workoutDurationMinutes: 42, workoutType: .cardio, sleepHours: 7.4, sleepQuality: .good, source: healthSource),
         DailyHealthLog(metadata: BaseMetadata(), date: today, totalCalories: 1840, gymAttended: false, sleepHours: 7.2, sleepQuality: .good, source: healthSource)
@@ -67,14 +67,14 @@ enum MockData {
     )
 
     static let criticalTasks: [AcademicTask] = [
-        AcademicTask(metadata: BaseMetadata(), courseID: nil, title: "Entrega Algebra", type: .assignment, status: .pending, priority: .urgent, dueDate: today, links: []),
-        AcademicTask(metadata: BaseMetadata(), courseID: nil, title: "Parcial Programacion", type: .exam, status: .inProgress, priority: .high, dueDate: makeDate(year: 2026, month: 6, day: 29), links: [])
+        AcademicTask(metadata: BaseMetadata(), courseID: nil, title: "Entrega Algebra", category: .deadline, status: .pending, priority: .critical, dueDate: today, links: []),
+        AcademicTask(metadata: BaseMetadata(), courseID: nil, title: "Parcial Programacion", category: .academic, status: .inProgress, priority: .critical, dueDate: makeDate(year: 2026, month: 6, day: 29), links: [])
     ]
 
     static let upcomingDeadlines: [AcademicTask] = [
-        AcademicTask(metadata: BaseMetadata(), courseID: nil, title: "Lectura Economia", type: .reading, status: .pending, priority: .medium, dueDate: makeDate(year: 2026, month: 7, day: 1), links: []),
-        AcademicTask(metadata: BaseMetadata(), courseID: nil, title: "TP Diseno", type: .project, status: .pending, priority: .medium, dueDate: makeDate(year: 2026, month: 7, day: 3), links: []),
-        AcademicTask(metadata: BaseMetadata(), courseID: nil, title: "Resumen Historia", type: .study, status: .pending, priority: .low, dueDate: makeDate(year: 2026, month: 7, day: 5), links: [])
+        AcademicTask(metadata: BaseMetadata(), courseID: nil, title: "Lectura Economia", category: .academic, status: .pending, priority: .medium, dueDate: makeDate(year: 2026, month: 7, day: 1), links: []),
+        AcademicTask(metadata: BaseMetadata(), courseID: nil, title: "TP Diseno", category: .academic, status: .pending, priority: .medium, dueDate: makeDate(year: 2026, month: 7, day: 3), links: []),
+        AcademicTask(metadata: BaseMetadata(), courseID: nil, title: "Resumen Historia", category: .academic, status: .pending, priority: .low, dueDate: makeDate(year: 2026, month: 7, day: 5), links: [])
     ]
 
     static let waitingResponses = [

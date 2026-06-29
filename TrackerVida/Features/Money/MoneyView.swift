@@ -1,9 +1,9 @@
 import SwiftUI
 
 struct MoneyView: View {
-    private var activeAccounts: [MoneyAccount] {
-        MockData.moneyAccounts.filter { $0.status == .active }
-    }
+    @EnvironmentObject private var store: AppStore
+
+    private var state: MoneyViewState { store.moneyState }
 
     var body: some View {
         ScreenScaffold(
@@ -12,7 +12,7 @@ struct MoneyView: View {
         ) {
             AppCard(tint: AppTheme.Colors.money) {
                 HStack {
-                    StatusPill(text: "\(activeAccounts.count) accounts", tint: AppTheme.Colors.money)
+                    StatusPill(text: "\(state.activeAccounts.count) accounts", tint: AppTheme.Colors.money)
                     Spacer()
                     Text("Static preview")
                         .font(.caption.weight(.bold))
@@ -41,13 +41,13 @@ struct MoneyView: View {
                 Text("Accounts and movement")
                     .font(.headline.weight(.bold))
 
-                ForEach(MockData.accountBalances) { balance in
+                ForEach(state.accountBalances) { balance in
                     InfoRow(title: balance.title, detail: balance.detail, value: balance.value, symbol: "wallet.pass.fill", tint: AppTheme.Colors.money)
                 }
 
                 Divider()
 
-                ForEach(MockData.moneyTransactions) { movement in
+                ForEach(state.transactions) { movement in
                     InfoRow(title: movement.title, detail: movement.category?.label ?? movement.kind.rawValue, value: formattedAmount(for: movement), symbol: symbol(for: movement), tint: tint(for: movement))
                 }
             }

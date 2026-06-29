@@ -12,10 +12,9 @@ enum WorkoutType: String, CaseIterable, Codable, Identifiable {
 }
 
 enum SleepQuality: String, CaseIterable, Codable, Identifiable {
-    case poor = "Poor"
-    case fair = "Fair"
     case good = "Good"
-    case great = "Great"
+    case normal = "Normal"
+    case bad = "Bad"
 
     var id: String { rawValue }
 }
