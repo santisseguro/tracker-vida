@@ -93,15 +93,9 @@ enum MockData {
     static let accountUSDT = UUID(uuidString: "00000000-0000-0000-0000-000000000203")!
 
     static let moneyAccounts = [
-        MoneyAccount(metadata: BaseMetadata(id: accountARS), name: "Efectivo ARS", currency: .ars, kind: .cash, status: .active),
-        MoneyAccount(metadata: BaseMetadata(id: accountBankARS), name: "Banco ARS", currency: .ars, kind: .bank, status: .active),
-        MoneyAccount(metadata: BaseMetadata(id: accountUSDT), name: "USDT Wallet", currency: .usdt, kind: .cryptoWallet, status: .active)
-    ]
-
-    static let accountBalances = [
-        SimpleListItem(title: "Efectivo ARS", detail: "ARS", value: "$82.400"),
-        SimpleListItem(title: "Banco ARS", detail: "ARS", value: "$418.900"),
-        SimpleListItem(title: "USDT Wallet", detail: "USDT", value: "1.240")
+        MoneyAccount(metadata: BaseMetadata(id: accountARS), name: "Efectivo ARS", currency: .ars, currentBalance: MoneyAmount(minorUnits: 82_400, currency: .ars), kind: .cash, status: .active),
+        MoneyAccount(metadata: BaseMetadata(id: accountBankARS), name: "Banco ARS", currency: .ars, currentBalance: MoneyAmount(minorUnits: 418_900, currency: .ars), kind: .bank, status: .active),
+        MoneyAccount(metadata: BaseMetadata(id: accountUSDT), name: "USDT Wallet", currency: .usdt, currentBalance: MoneyAmount(minorUnits: 1_240, currency: .usdt), kind: .cryptoWallet, status: .active)
     ]
 
     static let moneyTransactions = [
@@ -114,7 +108,7 @@ enum MockData {
         SimpleListItem(title: "Privacy", detail: "Local-first data, no external services connected.", value: "Ready"),
         SimpleListItem(title: "Health sources", detail: "Manual entries active. HealthKit reserved for later.", value: "Manual"),
         SimpleListItem(title: "Money defaults", detail: "ARS and USDT enabled for v1.", value: "Configured"),
-        SimpleListItem(title: "AI assistance", detail: "Only static previews are shown in this build.", value: "Mock")
+        SimpleListItem(title: "AI assistance", detail: "AI previews are mock-only in this build.", value: "Mock")
     ]
 
     static func makeDate(year: Int, month: Int, day: Int) -> Date {

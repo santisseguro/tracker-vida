@@ -23,7 +23,7 @@ struct SettingsView: View {
                         StatusPill(text: "Private v1", tint: AppTheme.Colors.primary)
                         Text("Tracker Vida")
                             .font(.title3.weight(.bold))
-                        Text("Static SwiftUI shell only. No persistence or integrations are connected.")
+                        Text("Local in-memory v1. No persistence or integrations are connected.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

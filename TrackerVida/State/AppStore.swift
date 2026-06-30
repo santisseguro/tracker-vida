@@ -9,6 +9,7 @@ struct DashboardViewState {
     var activeCriticalTasks: [AcademicTask]
     var upcomingDeadlines: [AcademicTask]
     var accountBalances: [SimpleListItem]
+    var moneyTotals: MoneyTotals
     var weightGoal: WeightGoal
 }
 
@@ -33,12 +34,45 @@ struct MoneyViewState {
     var activeAccounts: [MoneyAccount]
     var accountBalances: [SimpleListItem]
     var transactions: [MoneyTransaction]
+    var totals: MoneyTotals
 }
 
 struct DailyOrdersViewState {
     var plan: AIGeneratedDailyOrderPlan
     var totalItems: Int
     var completedItems: Int
+}
+
+struct MoneyTotals {
+    var arsMinorUnits: Int
+    var usdtMinorUnits: Int
+    var mockUSDTToARSRate: Int
+
+    var arsDisplay: String {
+        "$\(arsMinorUnits.formatted())"
+    }
+
+    var usdtDisplay: String {
+        "\(usdtMinorUnits.formatted())"
+    }
+
+    var dashboardDisplay: String {
+        "$\(abbreviatedARSEquivalent)"
+    }
+
+    var arsEquivalentMinorUnits: Int {
+        arsMinorUnits + (usdtMinorUnits * mockUSDTToARSRate)
+    }
+
+    private var abbreviatedARSEquivalent: String {
+        let absolute = abs(arsEquivalentMinorUnits)
+
+        if absolute >= 1_000 {
+            return "\(arsEquivalentMinorUnits / 1_000)K"
+        }
+
+        return arsEquivalentMinorUnits.formatted()
+    }
 }
 
 @MainActor
@@ -54,11 +88,11 @@ final class AppStore: ObservableObject {
     @Published var waitingResponses: [SimpleListItem]
     @Published var timeline: [SimpleListItem]
     @Published var moneyAccounts: [MoneyAccount]
-    @Published var accountBalances: [SimpleListItem]
     @Published var moneyTransactions: [MoneyTransaction]
     @Published var settingsSections: [SimpleListItem]
 
     private let calendar: Calendar
+    private let mockUSDTToARSRate: Int
 
     init(
         currentDate: Date = MockData.today,
@@ -72,12 +106,13 @@ final class AppStore: ObservableObject {
         waitingResponses: [SimpleListItem] = MockData.waitingResponses,
         timeline: [SimpleListItem] = MockData.timeline,
         moneyAccounts: [MoneyAccount] = MockData.moneyAccounts,
-        accountBalances: [SimpleListItem] = MockData.accountBalances,
         moneyTransactions: [MoneyTransaction] = MockData.moneyTransactions,
-        settingsSections: [SimpleListItem] = MockData.settingsSections
+        settingsSections: [SimpleListItem] = MockData.settingsSections,
+        mockUSDTToARSRate: Int = 1_000
     ) {
         self.currentDate = currentDate
         self.calendar = calendar
+        self.mockUSDTToARSRate = mockUSDTToARSRate
         self.weightGoal = weightGoal
         self.weightLogs = weightLogs
         self.dailyHealthLogs = dailyHealthLogs
@@ -87,7 +122,6 @@ final class AppStore: ObservableObject {
         self.waitingResponses = waitingResponses
         self.timeline = timeline
         self.moneyAccounts = moneyAccounts
-        self.accountBalances = accountBalances
         self.moneyTransactions = moneyTransactions
         self.settingsSections = settingsSections
     }
@@ -96,11 +130,12 @@ final class AppStore: ObservableObject {
         DashboardViewState(
             latestWeight: weightLogs.latest,
             todayHealth: dailyHealthLog(on: currentDate),
-            weeklyGymCount: dailyHealthLogs.gymAttendanceCount,
+            weeklyGymCount: recentHealthLogs.gymAttendanceCount,
             dailyOrderPlan: dailyOrderPlan,
             activeCriticalTasks: activeCriticalTasks,
             upcomingDeadlines: activeUpcomingDeadlines,
-            accountBalances: accountBalances,
+            accountBalances: moneyAccountBalanceItems,
+            moneyTotals: moneyTotals,
             weightGoal: weightGoal
         )
     }
@@ -109,9 +144,9 @@ final class AppStore: ObservableObject {
         GymHealthViewState(
             latestWeight: weightLogs.latest,
             todayHealth: dailyHealthLog(on: currentDate),
-            weeklyCalories: dailyHealthLogs.totalCalories,
-            gymAttendance: dailyHealthLogs.gymAttendanceCount,
-            averageSleepHours: dailyHealthLogs.averageSleepHours,
+            weeklyCalories: recentHealthLogs.totalCalories,
+            gymAttendance: recentHealthLogs.gymAttendanceCount,
+            averageSleepHours: recentHealthLogs.averageSleepHours,
             weightGoal: weightGoal,
             dailyOrderPlan: dailyOrderPlan
         )
@@ -129,8 +164,9 @@ final class AppStore: ObservableObject {
     var moneyState: MoneyViewState {
         MoneyViewState(
             activeAccounts: moneyAccounts.filter { $0.status == .active },
-            accountBalances: accountBalances,
-            transactions: moneyTransactions
+            accountBalances: moneyAccountBalanceItems,
+            transactions: moneyTransactions,
+            totals: moneyTotals
         )
     }
 
@@ -230,6 +266,162 @@ final class AppStore: ObservableObject {
         }
     }
 
+    func moneyAccount(id accountID: EntityID) -> MoneyAccount? {
+        moneyAccounts.first { $0.id == accountID }
+    }
+
+    @discardableResult
+    func addMoneyAccount(
+        name: String,
+        currency: CurrencyCode,
+        currentBalance: Int,
+        status: MoneyAccountStatus = .active,
+        createdAt: Date = .now
+    ) -> MoneyAccount {
+        let account = MoneyAccount(
+            metadata: BaseMetadata(createdAt: createdAt, updatedAt: createdAt),
+            name: normalizedRequiredText(name, fallback: "Account"),
+            currency: currency,
+            currentBalance: MoneyAmount(minorUnits: currentBalance, currency: currency),
+            kind: currency == .usdt ? .cryptoWallet : .digitalWallet,
+            status: status
+        )
+
+        moneyAccounts.append(account)
+        moneyAccounts = sortedMoneyAccounts(moneyAccounts)
+        return account
+    }
+
+    func updateMoneyAccount(_ updatedAccount: MoneyAccount, updatedAt: Date = .now) {
+        guard let index = moneyAccounts.firstIndex(where: { $0.id == updatedAccount.id }) else { return }
+
+        var account = updatedAccount
+        account.metadata.updatedAt = updatedAt
+        account.currentBalance.currency = account.currency
+
+        moneyAccounts[index] = account
+        moneyAccounts = sortedMoneyAccounts(moneyAccounts)
+    }
+
+    @discardableResult
+    func addIncomeTransaction(
+        title: String,
+        amount: Int,
+        toAccountID: EntityID,
+        category: IncomeCategory,
+        date: Date = .now
+    ) -> MoneyTransaction? {
+        guard let accountIndex = moneyAccounts.firstIndex(where: { $0.id == toAccountID }) else { return nil }
+        let account = moneyAccounts[accountIndex]
+        let transactionAmount = MoneyAmount(minorUnits: abs(amount), currency: account.currency)
+        moneyAccounts[accountIndex].currentBalance.minorUnits += transactionAmount.minorUnits
+
+        let transaction = MoneyTransaction(
+            metadata: BaseMetadata(createdAt: date, updatedAt: date),
+            date: date,
+            title: normalizedRequiredText(title, fallback: "Income"),
+            kind: .income,
+            amount: transactionAmount,
+            toAccountID: toAccountID,
+            category: .income(category)
+        )
+
+        moneyTransactions.insert(transaction, at: 0)
+        return transaction
+    }
+
+    @discardableResult
+    func addExpenseTransaction(
+        title: String,
+        amount: Int,
+        fromAccountID: EntityID,
+        category: ExpenseCategory,
+        date: Date = .now
+    ) -> MoneyTransaction? {
+        guard let accountIndex = moneyAccounts.firstIndex(where: { $0.id == fromAccountID }) else { return nil }
+        let account = moneyAccounts[accountIndex]
+        let transactionAmount = MoneyAmount(minorUnits: abs(amount), currency: account.currency)
+        moneyAccounts[accountIndex].currentBalance.minorUnits -= transactionAmount.minorUnits
+
+        let transaction = MoneyTransaction(
+            metadata: BaseMetadata(createdAt: date, updatedAt: date),
+            date: date,
+            title: normalizedRequiredText(title, fallback: "Expense"),
+            kind: .expense,
+            amount: transactionAmount,
+            fromAccountID: fromAccountID,
+            category: .expense(category)
+        )
+
+        moneyTransactions.insert(transaction, at: 0)
+        return transaction
+    }
+
+    @discardableResult
+    func addTransferTransaction(
+        title: String,
+        amount: Int,
+        fromAccountID: EntityID,
+        toAccountID: EntityID,
+        date: Date = .now
+    ) -> MoneyTransaction? {
+        guard fromAccountID != toAccountID,
+              let fromIndex = moneyAccounts.firstIndex(where: { $0.id == fromAccountID }),
+              let toIndex = moneyAccounts.firstIndex(where: { $0.id == toAccountID })
+        else { return nil }
+
+        let sourceAccount = moneyAccounts[fromIndex]
+        let destinationAccount = moneyAccounts[toIndex]
+        let outgoingAmount = MoneyAmount(minorUnits: abs(amount), currency: sourceAccount.currency)
+        let incomingAmount = convertedAmount(outgoingAmount, to: destinationAccount.currency)
+
+        moneyAccounts[fromIndex].currentBalance.minorUnits -= outgoingAmount.minorUnits
+        moneyAccounts[toIndex].currentBalance.minorUnits += incomingAmount.minorUnits
+
+        let transaction = MoneyTransaction(
+            metadata: BaseMetadata(createdAt: date, updatedAt: date),
+            date: date,
+            title: normalizedRequiredText(title, fallback: "Transfer"),
+            kind: .transfer,
+            amount: outgoingAmount,
+            fromAccountID: fromAccountID,
+            toAccountID: toAccountID
+        )
+
+        moneyTransactions.insert(transaction, at: 0)
+        return transaction
+    }
+
+    @discardableResult
+    func addBalanceAdjustmentTransaction(
+        title: String,
+        accountID: EntityID,
+        newBalance: Int,
+        date: Date = .now
+    ) -> MoneyTransaction? {
+        guard let accountIndex = moneyAccounts.firstIndex(where: { $0.id == accountID }) else { return nil }
+
+        let previousBalance = moneyAccounts[accountIndex].currentBalance
+        let updatedBalance = MoneyAmount(minorUnits: newBalance, currency: previousBalance.currency)
+        let difference = updatedBalance.minorUnits - previousBalance.minorUnits
+        moneyAccounts[accountIndex].currentBalance = updatedBalance
+
+        let transaction = MoneyTransaction(
+            metadata: BaseMetadata(createdAt: date, updatedAt: date),
+            date: date,
+            title: normalizedRequiredText(title, fallback: "Balance adjustment"),
+            kind: .balanceAdjustment,
+            amount: MoneyAmount(minorUnits: difference, currency: previousBalance.currency),
+            fromAccountID: difference < 0 ? accountID : nil,
+            toAccountID: difference >= 0 ? accountID : nil,
+            balanceBefore: previousBalance,
+            balanceAfter: updatedBalance
+        )
+
+        moneyTransactions.insert(transaction, at: 0)
+        return transaction
+    }
+
     func universityTask(id taskID: EntityID) -> AcademicTask? {
         allUniversityTasks.first { $0.id == taskID }
     }
@@ -294,6 +486,74 @@ final class AppStore: ObservableObject {
 
     private var allUniversityTasks: [AcademicTask] {
         criticalTasks + upcomingDeadlines
+    }
+
+    private var recentHealthLogs: [DailyHealthLog] {
+        let endDay = calendar.startOfDay(for: currentDate)
+        let startDay = calendar.date(byAdding: .day, value: -6, to: endDay) ?? endDay
+
+        return dailyHealthLogs.filter { log in
+            let logDay = calendar.startOfDay(for: log.date)
+            return logDay >= startDay && logDay <= endDay
+        }
+    }
+
+    private var moneyTotals: MoneyTotals {
+        MoneyTotals(
+            arsMinorUnits: moneyAccounts
+                .filter { $0.status == .active && $0.currency == .ars }
+                .map(\.currentBalance.minorUnits)
+                .reduce(0, +),
+            usdtMinorUnits: moneyAccounts
+                .filter { $0.status == .active && $0.currency == .usdt }
+                .map(\.currentBalance.minorUnits)
+                .reduce(0, +),
+            mockUSDTToARSRate: mockUSDTToARSRate
+        )
+    }
+
+    private var moneyAccountBalanceItems: [SimpleListItem] {
+        sortedMoneyAccounts(moneyAccounts.filter { $0.status == .active })
+            .map { account in
+                SimpleListItem(
+                    id: account.id,
+                    title: account.name,
+                    detail: account.currency.rawValue,
+                    value: formattedMoneyAmount(account.currentBalance)
+                )
+            }
+    }
+
+    private func convertedAmount(_ amount: MoneyAmount, to currency: CurrencyCode) -> MoneyAmount {
+        guard amount.currency != currency else { return amount }
+
+        switch (amount.currency, currency) {
+        case (.ars, .usdt):
+            return MoneyAmount(minorUnits: amount.minorUnits / mockUSDTToARSRate, currency: .usdt)
+        case (.usdt, .ars):
+            return MoneyAmount(minorUnits: amount.minorUnits * mockUSDTToARSRate, currency: .ars)
+        default:
+            return MoneyAmount(minorUnits: amount.minorUnits, currency: currency)
+        }
+    }
+
+    private func sortedMoneyAccounts(_ accounts: [MoneyAccount]) -> [MoneyAccount] {
+        accounts.sorted { lhs, rhs in
+            if lhs.status != rhs.status {
+                return lhs.status == .active
+            }
+
+            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+        }
+    }
+
+    private func formattedMoneyAmount(_ amount: MoneyAmount) -> String {
+        switch amount.currency {
+        case .ars:
+            return "$\(amount.minorUnits.formatted())"
+        case .usdt:
+            return amount.minorUnits.formatted()
+        }
     }
 
     private var activeCriticalTasks: [AcademicTask] {
@@ -373,6 +633,11 @@ final class AppStore: ObservableObject {
     private func normalizedOptionalText(_ text: String?) -> String? {
         let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func normalizedRequiredText(_ text: String, fallback: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? fallback : trimmed
     }
 
     private func isSameDay(_ lhs: Date, _ rhs: Date) -> Bool {

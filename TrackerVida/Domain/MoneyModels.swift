@@ -80,6 +80,7 @@ struct MoneyAccount: Codable, Hashable, Identifiable {
     var metadata: BaseMetadata
     var name: String
     var currency: CurrencyCode
+    var currentBalance: MoneyAmount
     var kind: MoneyAccountKind
     var status: MoneyAccountStatus
     var notes: String? = nil
@@ -106,6 +107,8 @@ struct MoneyTransaction: Codable, Hashable, Identifiable {
     var fromAccountID: EntityID? = nil
     var toAccountID: EntityID? = nil
     var category: MoneyTransactionCategory? = nil
+    var balanceBefore: MoneyAmount? = nil
+    var balanceAfter: MoneyAmount? = nil
     var notes: String? = nil
 
     var id: EntityID { metadata.id }

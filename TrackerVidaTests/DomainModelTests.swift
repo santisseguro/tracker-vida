@@ -21,6 +21,136 @@ final class DomainModelTests: XCTestCase {
         XCTAssertNil(transfer.category)
     }
 
+    @MainActor
+    func testStoreAddsMoneyAccount() {
+        let store = AppStore(currentDate: MockData.today)
+
+        let account = store.addMoneyAccount(
+            name: "Mercado Pago",
+            currency: .ars,
+            currentBalance: 25_000,
+            status: .active,
+            createdAt: MockData.today
+        )
+
+        XCTAssertEqual(store.moneyAccount(id: account.id)?.name, "Mercado Pago")
+        XCTAssertEqual(store.moneyAccount(id: account.id)?.currentBalance.minorUnits, 25_000)
+        XCTAssertEqual(store.moneyState.activeAccounts.count, 4)
+    }
+
+    @MainActor
+    func testStoreEditsMoneyAccount() {
+        let store = AppStore(currentDate: MockData.today)
+        var account = store.moneyAccounts[0]
+
+        account.name = "Efectivo diario"
+        account.currentBalance = MoneyAmount(minorUnits: 90_000, currency: .ars)
+        account.status = .archived
+
+        store.updateMoneyAccount(account, updatedAt: MockData.today)
+
+        XCTAssertEqual(store.moneyAccount(id: account.id)?.name, "Efectivo diario")
+        XCTAssertEqual(store.moneyAccount(id: account.id)?.currentBalance.minorUnits, 90_000)
+        XCTAssertEqual(store.moneyAccount(id: account.id)?.status, .archived)
+        XCTAssertEqual(store.moneyState.activeAccounts.count, 2)
+    }
+
+    @MainActor
+    func testStoreAddsIncomeAndUpdatesBalance() {
+        let store = AppStore(currentDate: MockData.today)
+        let accountID = MockData.accountBankARS
+
+        let transaction = store.addIncomeTransaction(
+            title: "Pago extra",
+            amount: 40_000,
+            toAccountID: accountID,
+            category: .trabajo,
+            date: MockData.today
+        )
+
+        XCTAssertEqual(store.moneyAccount(id: accountID)?.currentBalance.minorUnits, 458_900)
+        XCTAssertEqual(transaction?.category?.label, "Trabajo")
+        XCTAssertEqual(transaction?.fromAccountID, nil)
+        XCTAssertEqual(transaction?.toAccountID, accountID)
+    }
+
+    @MainActor
+    func testStoreAddsExpenseAndUpdatesBalance() {
+        let store = AppStore(currentDate: MockData.today)
+        let accountID = MockData.accountARS
+
+        let transaction = store.addExpenseTransaction(
+            title: "Colectivo",
+            amount: 2_500,
+            fromAccountID: accountID,
+            category: .transporte,
+            date: MockData.today
+        )
+
+        XCTAssertEqual(store.moneyAccount(id: accountID)?.currentBalance.minorUnits, 79_900)
+        XCTAssertEqual(transaction?.category?.label, "Transporte")
+        XCTAssertEqual(transaction?.fromAccountID, accountID)
+        XCTAssertEqual(transaction?.toAccountID, nil)
+    }
+
+    @MainActor
+    func testStoreTransferUpdatesBothAccounts() {
+        let store = AppStore(currentDate: MockData.today)
+
+        let transaction = store.addTransferTransaction(
+            title: "Cash to bank",
+            amount: 10_000,
+            fromAccountID: MockData.accountARS,
+            toAccountID: MockData.accountBankARS,
+            date: MockData.today
+        )
+
+        XCTAssertEqual(store.moneyAccount(id: MockData.accountARS)?.currentBalance.minorUnits, 72_400)
+        XCTAssertEqual(store.moneyAccount(id: MockData.accountBankARS)?.currentBalance.minorUnits, 428_900)
+        XCTAssertNil(transaction?.category)
+    }
+
+    @MainActor
+    func testStoreBalanceAdjustmentStoresDifference() {
+        let store = AppStore(currentDate: MockData.today)
+
+        let transaction = store.addBalanceAdjustmentTransaction(
+            title: "Cash recount",
+            accountID: MockData.accountARS,
+            newBalance: 80_000,
+            date: MockData.today
+        )
+
+        XCTAssertEqual(store.moneyAccount(id: MockData.accountARS)?.currentBalance.minorUnits, 80_000)
+        XCTAssertEqual(transaction?.amount.minorUnits, -2_400)
+        XCTAssertEqual(transaction?.balanceBefore?.minorUnits, 82_400)
+        XCTAssertEqual(transaction?.balanceAfter?.minorUnits, 80_000)
+        XCTAssertNil(transaction?.category)
+    }
+
+    @MainActor
+    func testDashboardMoneyTotalsUpdateFromSharedState() {
+        let store = AppStore(currentDate: MockData.today)
+
+        XCTAssertEqual(store.dashboardState.moneyTotals.arsMinorUnits, 501_300)
+        XCTAssertEqual(store.dashboardState.moneyTotals.usdtMinorUnits, 1_240)
+        XCTAssertEqual(store.dashboardState.moneyTotals.arsEquivalentMinorUnits, 1_741_300)
+        XCTAssertEqual(store.dashboardState.moneyTotals.dashboardDisplay, "$1741K")
+
+        store.addIncomeTransaction(
+            title: "Reembolso",
+            amount: 1_200,
+            toAccountID: MockData.accountBankARS,
+            category: .reembolso,
+            date: MockData.today
+        )
+
+        XCTAssertEqual(store.moneyState.totals.arsMinorUnits, 502_500)
+        XCTAssertEqual(store.dashboardState.moneyTotals.arsMinorUnits, 502_500)
+        XCTAssertEqual(store.dashboardState.moneyTotals.arsEquivalentMinorUnits, 1_742_500)
+        XCTAssertEqual(store.dashboardState.moneyTotals.dashboardDisplay, "$1742K")
+    }
+
     func testDailyOrderCompletionRatio() {
         XCTAssertEqual(MockData.dailyOrderPlan.completionRatio, 0)
         XCTAssertEqual(MockData.dailyOrderPlan.orders.first?.checklist.count, 3)
@@ -231,5 +361,26 @@ final class DomainModelTests: XCTestCase {
         XCTAssertTrue(store.weightLog(on: previousDate)?.lateEntry?.isLateEntry == true)
         XCTAssertTrue(store.dailyHealthLog(on: previousDate)?.lateEntry?.isLateEntry == true)
         XCTAssertEqual(store.dailyHealthLog(on: previousDate)?.sleepQuality, .bad)
+    }
+
+    @MainActor
+    func testWeeklyHealthSummariesUseRecentSevenDays() {
+        let oldDate = MockData.makeDate(year: 2026, month: 6, day: 20)
+        let store = AppStore(currentDate: MockData.today)
+
+        store.upsertDailyHealthLog(
+            date: oldDate,
+            totalCalories: 9_999,
+            gymAttended: true,
+            workoutDurationMinutes: 60,
+            workoutType: .push,
+            sleepHours: 10,
+            sleepQuality: .good,
+            enteredAt: MockData.today
+        )
+
+        XCTAssertEqual(store.dashboardState.weeklyGymCount, 4)
+        XCTAssertEqual(store.gymHealthState.gymAttendance, 4)
+        XCTAssertEqual(store.gymHealthState.weeklyCalories, 13_790)
     }
 }

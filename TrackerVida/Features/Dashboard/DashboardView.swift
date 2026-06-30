@@ -59,7 +59,7 @@ struct DashboardView: View {
                     )
                     MetricTile(
                         title: "Money",
-                        value: "$501K",
+                        value: state.moneyTotals.dashboardDisplay,
                         detail: "ARS + USDT",
                         tint: AppTheme.Colors.money,
                         progress: nil
