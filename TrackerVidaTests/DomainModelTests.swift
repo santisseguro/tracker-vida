@@ -480,6 +480,125 @@ final class DomainModelTests: XCTestCase {
         XCTAssertEqual(restoredStore.dailyOrderPlan.orders[0].checklist.first { $0.id == itemID }?.status, .done)
     }
 
+    @MainActor
+    func testQAGymHealthWorkflowRecalculatesOrderAndRestoresChecklist() {
+        let persistence = InMemoryAppStatePersistence(state: nil)
+        let store = AppStore(currentDate: MockData.today, persistence: persistence)
+
+        store.upsertWeightLog(date: MockData.today, weightKg: 80.4, enteredAt: MockData.today)
+        store.upsertDailyHealthLog(
+            date: MockData.today,
+            totalCalories: 2_600,
+            gymAttended: false,
+            workoutDurationMinutes: nil,
+            workoutType: nil,
+            sleepHours: 5.8,
+            sleepQuality: .bad,
+            enteredAt: MockData.today
+        )
+
+        XCTAssertEqual(store.gymHealthState.progress.currentWeightKg, 80.4)
+        XCTAssertEqual(store.gymHealthState.progress.dailyCalorieDelta, 600)
+        XCTAssertTrue(store.dailyOrderPlan.orders[0].checklist.contains { $0.title.contains("Correct calories by 600") })
+        XCTAssertTrue(store.dailyOrderPlan.orders[0].checklist.contains { $0.title.contains("Train today") })
+        XCTAssertTrue(store.dailyOrderPlan.orders[0].checklist.contains { $0.title.contains("Protect sleep") })
+
+        let itemID = store.dailyOrderPlan.orders[0].checklist[0].id
+        store.toggleDailyChecklistItem(itemID)
+
+        let restoredStore = AppStore(
+            currentDate: MockData.today,
+            persistence: InMemoryAppStatePersistence(state: persistence.savedStates.last)
+        )
+
+        XCTAssertEqual(restoredStore.weightLog(on: MockData.today)?.weightKg, 80.4)
+        XCTAssertEqual(restoredStore.dailyHealthLog(on: MockData.today)?.totalCalories, 2_600)
+        XCTAssertEqual(restoredStore.dailyOrderPlan.orders[0].checklist.first { $0.id == itemID }?.status, .done)
+    }
+
+    @MainActor
+    func testQAUniversityWorkflowUpdatesDashboardAndWaitingState() {
+        let store = AppStore(currentDate: MockData.today)
+
+        let task = store.addUniversityTask(
+            title: "QA Certificado",
+            category: .document,
+            status: .pending,
+            priority: .critical,
+            dueDate: MockData.today,
+            notes: "Original",
+            waitingSince: nil,
+            createdAt: MockData.today
+        )
+
+        XCTAssertEqual(store.dashboardState.activeCriticalTasks.count, 3)
+
+        var editedTask = task
+        editedTask.title = "QA Certificado final"
+        editedTask.notes = "Edited"
+        editedTask.priority = .high
+        store.updateUniversityTask(editedTask, updatedAt: MockData.today)
+
+        XCTAssertEqual(store.universityTask(id: task.id)?.title, "QA Certificado final")
+        XCTAssertEqual(store.dashboardState.activeCriticalTasks.count, 2)
+
+        let waitingSince = MockData.makeDate(year: 2026, month: 6, day: 27)
+        store.updateAcademicTaskStatus(task.id, status: .waitingResponse, waitingSince: waitingSince, updatedAt: MockData.today)
+
+        XCTAssertEqual(store.universityTask(id: task.id)?.waitingSince, waitingSince)
+        XCTAssertTrue(store.universityState.waitingResponses.contains { $0.title == "QA Certificado final" })
+
+        store.markAcademicTaskCompleted(task.id)
+
+        XCTAssertEqual(store.universityTask(id: task.id)?.status, .completed)
+        XCTAssertEqual(store.dashboardState.activeCriticalTasks.count, 2)
+    }
+
+    @MainActor
+    func testQAMoneyWorkflowUpdatesBalancesDashboardAndRestore() {
+        let persistence = InMemoryAppStatePersistence(state: nil)
+        let store = AppStore(currentDate: MockData.today, persistence: persistence)
+        let initialDashboardTotal = store.dashboardState.moneyTotals.arsEquivalentMinorUnits
+
+        let account = store.addMoneyAccount(
+            name: "QA Wallet",
+            currency: .ars,
+            currentBalance: 10_000,
+            createdAt: MockData.today
+        )
+        var editedAccount = account
+        editedAccount.name = "QA Wallet edited"
+        editedAccount.currentBalance = MoneyAmount(minorUnits: 15_000, currency: .ars)
+        store.updateMoneyAccount(editedAccount, updatedAt: MockData.today)
+
+        let usdtAccount = store.addMoneyAccount(
+            name: "QA USDT",
+            currency: .usdt,
+            currentBalance: 10,
+            createdAt: MockData.today
+        )
+
+        store.addIncomeTransaction(title: "QA income", amount: 500, toAccountID: account.id, category: .otro, date: MockData.today)
+        store.addExpenseTransaction(title: "QA expense", amount: 300, fromAccountID: account.id, category: .otro, date: MockData.today)
+        store.addTransferTransaction(title: "QA transfer", amount: 200, fromAccountID: account.id, toAccountID: MockData.accountBankARS, date: MockData.today)
+        let adjustment = store.addBalanceAdjustmentTransaction(title: "QA adjustment", accountID: account.id, newBalance: 20_000, date: MockData.today)
+
+        XCTAssertEqual(store.moneyAccount(id: account.id)?.name, "QA Wallet edited")
+        XCTAssertEqual(store.moneyAccount(id: account.id)?.currentBalance.minorUnits, 20_000)
+        XCTAssertEqual(store.moneyAccount(id: usdtAccount.id)?.currentBalance.minorUnits, 10)
+        XCTAssertEqual(adjustment?.amount.minorUnits, 5_000)
+        XCTAssertGreaterThan(store.dashboardState.moneyTotals.arsEquivalentMinorUnits, initialDashboardTotal)
+
+        let restoredStore = AppStore(
+            currentDate: MockData.today,
+            persistence: InMemoryAppStatePersistence(state: persistence.savedStates.last)
+        )
+
+        XCTAssertEqual(restoredStore.moneyAccount(id: account.id)?.currentBalance.minorUnits, 20_000)
+        XCTAssertTrue(restoredStore.moneyTransactions.contains { $0.title == "QA adjustment" })
+        XCTAssertEqual(restoredStore.dashboardState.moneyTotals.arsEquivalentMinorUnits, store.dashboardState.moneyTotals.arsEquivalentMinorUnits)
+    }
+
     func testUniversityV1ChoiceSets() {
         XCTAssertEqual(AcademicTaskCategory.allCases.map(\.rawValue), ["Académico", "Trámite", "Documento", "Deadline", "Email", "Otro"])
         XCTAssertEqual(AcademicTaskPriority.allCases.map(\.rawValue), ["Crítica", "Alta", "Media", "Baja"])
