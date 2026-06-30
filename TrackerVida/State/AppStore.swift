@@ -79,6 +79,7 @@ struct MoneyTotals {
 final class AppStore: ObservableObject {
     let currentDate: Date
 
+    @Published private(set) var persistenceError: AppStatePersistenceError?
     @Published var weightGoal: WeightGoal
     @Published var weightLogs: [WeightLog]
     @Published var dailyHealthLogs: [DailyHealthLog]
@@ -93,10 +94,12 @@ final class AppStore: ObservableObject {
 
     private let calendar: Calendar
     private let mockUSDTToARSRate: Int
+    private let persistence: AppStatePersisting?
 
     init(
         currentDate: Date = MockData.today,
         calendar: Calendar = MockData.calendar,
+        persistence: AppStatePersisting? = nil,
         weightGoal: WeightGoal = MockData.weightGoal,
         weightLogs: [WeightLog] = MockData.weightLogs,
         dailyHealthLogs: [DailyHealthLog] = MockData.dailyHealthLogs,
@@ -113,6 +116,34 @@ final class AppStore: ObservableObject {
         self.currentDate = currentDate
         self.calendar = calendar
         self.mockUSDTToARSRate = mockUSDTToARSRate
+        self.persistence = persistence
+
+        let restoredState: PersistedAppState?
+        do {
+            restoredState = try persistence?.load()
+        } catch let error as AppStatePersistenceError {
+            restoredState = nil
+            persistenceError = error
+        } catch {
+            restoredState = nil
+            persistenceError = .loadFailed(error.localizedDescription)
+        }
+
+        if let restoredState {
+            self.weightGoal = restoredState.weightGoal
+            self.weightLogs = restoredState.weightLogs
+            self.dailyHealthLogs = restoredState.dailyHealthLogs
+            self.dailyOrderPlan = restoredState.dailyOrderPlan
+            self.criticalTasks = restoredState.criticalTasks
+            self.upcomingDeadlines = restoredState.upcomingDeadlines
+            self.waitingResponses = restoredState.waitingResponses
+            self.timeline = restoredState.timeline
+            self.moneyAccounts = restoredState.moneyAccounts
+            self.moneyTransactions = restoredState.moneyTransactions
+            self.settingsSections = settingsSections
+            return
+        }
+
         self.weightGoal = weightGoal
         self.weightLogs = weightLogs
         self.dailyHealthLogs = dailyHealthLogs
@@ -209,6 +240,7 @@ final class AppStore: ObservableObject {
         }
 
         weightLogs.sort { $0.date < $1.date }
+        saveState()
     }
 
     func upsertDailyHealthLog(
@@ -250,6 +282,7 @@ final class AppStore: ObservableObject {
         }
 
         dailyHealthLogs.sort { $0.date < $1.date }
+        saveState()
     }
 
     func toggleDailyChecklistItem(_ itemID: EntityID) {
@@ -262,6 +295,7 @@ final class AppStore: ObservableObject {
             dailyOrderPlan.orders[orderIndex].checklist[itemIndex].status = currentStatus == .done ? .pending : .done
             dailyOrderPlan.orders[orderIndex].metadata.updatedAt = .now
             dailyOrderPlan.metadata.updatedAt = .now
+            saveState()
             return
         }
     }
@@ -289,6 +323,7 @@ final class AppStore: ObservableObject {
 
         moneyAccounts.append(account)
         moneyAccounts = sortedMoneyAccounts(moneyAccounts)
+        saveState()
         return account
     }
 
@@ -301,6 +336,7 @@ final class AppStore: ObservableObject {
 
         moneyAccounts[index] = account
         moneyAccounts = sortedMoneyAccounts(moneyAccounts)
+        saveState()
     }
 
     @discardableResult
@@ -327,6 +363,7 @@ final class AppStore: ObservableObject {
         )
 
         moneyTransactions.insert(transaction, at: 0)
+        saveState()
         return transaction
     }
 
@@ -354,6 +391,7 @@ final class AppStore: ObservableObject {
         )
 
         moneyTransactions.insert(transaction, at: 0)
+        saveState()
         return transaction
     }
 
@@ -389,6 +427,7 @@ final class AppStore: ObservableObject {
         )
 
         moneyTransactions.insert(transaction, at: 0)
+        saveState()
         return transaction
     }
 
@@ -419,6 +458,7 @@ final class AppStore: ObservableObject {
         )
 
         moneyTransactions.insert(transaction, at: 0)
+        saveState()
         return transaction
     }
 
@@ -454,6 +494,7 @@ final class AppStore: ObservableObject {
         )
 
         insertUniversityTask(task)
+        saveState()
         return task
     }
 
@@ -463,6 +504,7 @@ final class AppStore: ObservableObject {
 
         removeUniversityTask(task.id)
         insertUniversityTask(task)
+        saveState()
     }
 
     func updateAcademicTaskStatus(_ taskID: EntityID, status: AcademicTaskStatus, waitingSince: Date? = nil, updatedAt: Date = .now) {
@@ -655,5 +697,45 @@ final class AppStore: ObservableObject {
             originalEntryDate: date,
             enteredAt: enteredAt
         )
+    }
+
+    private var persistedState: PersistedAppState {
+        PersistedAppState(
+            weightGoal: weightGoal,
+            weightLogs: weightLogs,
+            dailyHealthLogs: dailyHealthLogs,
+            dailyOrderPlan: dailyOrderPlan,
+            criticalTasks: criticalTasks,
+            upcomingDeadlines: upcomingDeadlines,
+            waitingResponses: waitingResponses,
+            timeline: timeline,
+            moneyAccounts: moneyAccounts,
+            moneyTransactions: moneyTransactions
+        )
+    }
+
+    private func saveState() {
+        guard let persistence else { return }
+
+        do {
+            try persistence.save(persistedState)
+            persistenceError = nil
+        } catch let error as AppStatePersistenceError {
+            persistenceError = error
+        } catch {
+            persistenceError = .saveFailed(error.localizedDescription)
+        }
+    }
+
+    static func live() -> AppStore {
+        AppStore(persistence: makeLivePersistence())
+    }
+
+    private static func makeLivePersistence() -> AppStatePersisting? {
+        do {
+            return try JSONFileAppStatePersistence.live()
+        } catch {
+            return nil
+        }
     }
 }

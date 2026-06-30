@@ -156,6 +156,116 @@ final class DomainModelTests: XCTestCase {
         XCTAssertEqual(MockData.dailyOrderPlan.orders.first?.checklist.count, 3)
     }
 
+    func testPersistedAppStateEncodesAndDecodes() throws {
+        var plan = MockData.dailyOrderPlan
+        plan.orders[0].checklist[0].status = .done
+
+        let state = PersistedAppState(
+            weightGoal: MockData.weightGoal,
+            weightLogs: MockData.weightLogs,
+            dailyHealthLogs: MockData.dailyHealthLogs,
+            dailyOrderPlan: plan,
+            criticalTasks: MockData.criticalTasks,
+            upcomingDeadlines: MockData.upcomingDeadlines,
+            waitingResponses: MockData.waitingResponses,
+            timeline: MockData.timeline,
+            moneyAccounts: MockData.moneyAccounts,
+            moneyTransactions: MockData.moneyTransactions
+        )
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        let data = try encoder.encode(state)
+        let decoded = try decoder.decode(PersistedAppState.self, from: data)
+
+        XCTAssertEqual(decoded.schemaVersion, state.schemaVersion)
+        XCTAssertEqual(decoded.weightGoal.targetWeightKg, state.weightGoal.targetWeightKg)
+        XCTAssertEqual(decoded.weightLogs.map(\.id), state.weightLogs.map(\.id))
+        XCTAssertEqual(decoded.dailyHealthLogs.count, state.dailyHealthLogs.count)
+        XCTAssertEqual(decoded.dailyOrderPlan.orders[0].checklist[0].status, .done)
+        XCTAssertEqual(decoded.criticalTasks.map(\.title), state.criticalTasks.map(\.title))
+        XCTAssertEqual(decoded.moneyAccounts.map(\.name), state.moneyAccounts.map(\.name))
+        XCTAssertEqual(decoded.moneyTransactions.map(\.title), state.moneyTransactions.map(\.title))
+    }
+
+    @MainActor
+    func testStoreUsesSeedDataWhenNoSavedStateExists() {
+        let persistence = InMemoryAppStatePersistence(state: nil)
+
+        let store = AppStore(currentDate: MockData.today, persistence: persistence)
+
+        XCTAssertEqual(store.weightGoal.targetWeightKg, MockData.weightGoal.targetWeightKg)
+        XCTAssertEqual(store.weightLogs.count, MockData.weightLogs.count)
+        XCTAssertEqual(store.criticalTasks.count, MockData.criticalTasks.count)
+        XCTAssertEqual(store.moneyAccounts.count, MockData.moneyAccounts.count)
+        XCTAssertEqual(store.dailyOrdersState.completedItems, 0)
+    }
+
+    @MainActor
+    func testStoreRestoresSavedState() {
+        var plan = MockData.dailyOrderPlan
+        plan.orders[0].checklist[0].status = .done
+
+        var task = MockData.criticalTasks[0]
+        task.status = .completed
+        task.completedAt = MockData.today
+
+        var account = MockData.moneyAccounts[0]
+        account.name = "Saved cash"
+        account.currentBalance = MoneyAmount(minorUnits: 123_456, currency: .ars)
+
+        let savedState = PersistedAppState(
+            weightGoal: WeightGoal(
+                metadata: MockData.weightGoal.metadata,
+                targetWeightKg: 76,
+                startWeightKg: MockData.weightGoal.startWeightKg,
+                startDate: MockData.weightGoal.startDate,
+                targetDate: MockData.weightGoal.targetDate,
+                isActive: true
+            ),
+            weightLogs: [
+                WeightLog(
+                    metadata: BaseMetadata(createdAt: MockData.today, updatedAt: MockData.today),
+                    date: MockData.today,
+                    weightKg: 79.9,
+                    source: MockData.healthSource
+                )
+            ],
+            dailyHealthLogs: MockData.dailyHealthLogs,
+            dailyOrderPlan: plan,
+            criticalTasks: [task],
+            upcomingDeadlines: MockData.upcomingDeadlines,
+            waitingResponses: MockData.waitingResponses,
+            timeline: MockData.timeline,
+            moneyAccounts: [account],
+            moneyTransactions: MockData.moneyTransactions
+        )
+        let persistence = InMemoryAppStatePersistence(state: savedState)
+
+        let store = AppStore(currentDate: MockData.today, persistence: persistence)
+
+        XCTAssertEqual(store.weightGoal.targetWeightKg, 76)
+        XCTAssertEqual(store.weightLogs.first?.weightKg, 79.9)
+        XCTAssertEqual(store.dailyOrdersState.completedItems, 1)
+        XCTAssertEqual(store.criticalTasks.first?.status, .completed)
+        XCTAssertEqual(store.moneyAccounts.first?.name, "Saved cash")
+        XCTAssertEqual(store.moneyAccounts.first?.currentBalance.minorUnits, 123_456)
+    }
+
+    @MainActor
+    func testStoreSavesAfterWorkflowMutation() {
+        let persistence = InMemoryAppStatePersistence(state: nil)
+        let store = AppStore(currentDate: MockData.today, persistence: persistence)
+
+        store.upsertWeightLog(date: MockData.today, weightKg: 80.2, enteredAt: MockData.today)
+
+        XCTAssertEqual(persistence.savedStates.count, 1)
+        XCTAssertEqual(persistence.savedStates.last?.weightLogs.latest?.weightKg, 80.2)
+    }
+
     func testGymHealthV1ChoiceSets() {
         XCTAssertEqual(WorkoutType.allCases.map(\.rawValue), ["Push", "Pull", "Legs", "Full Body", "Cardio", "Other"])
         XCTAssertEqual(SleepQuality.allCases.map(\.rawValue), ["Good", "Normal", "Bad"])
@@ -382,5 +492,23 @@ final class DomainModelTests: XCTestCase {
         XCTAssertEqual(store.dashboardState.weeklyGymCount, 4)
         XCTAssertEqual(store.gymHealthState.gymAttendance, 4)
         XCTAssertEqual(store.gymHealthState.weeklyCalories, 13_790)
+    }
+}
+
+private final class InMemoryAppStatePersistence: AppStatePersisting {
+    var state: PersistedAppState?
+    var savedStates: [PersistedAppState] = []
+
+    init(state: PersistedAppState?) {
+        self.state = state
+    }
+
+    func load() throws -> PersistedAppState? {
+        state
+    }
+
+    func save(_ state: PersistedAppState) throws {
+        savedStates.append(state)
+        self.state = state
     }
 }

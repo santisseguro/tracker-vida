@@ -116,7 +116,7 @@ enum MockData {
     }
 }
 
-struct SimpleListItem: Identifiable, Hashable {
+struct SimpleListItem: Codable, Identifiable, Hashable {
     var id = UUID()
     var title: String
     var detail: String
