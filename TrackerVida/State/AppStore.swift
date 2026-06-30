@@ -21,6 +21,7 @@ struct GymHealthViewState {
     var averageSleepHours: Double
     var weightGoal: WeightGoal
     var dailyOrderPlan: AIGeneratedDailyOrderPlan
+    var progress: GymHealthProgress
 }
 
 struct UniversityViewState {
@@ -95,6 +96,7 @@ final class AppStore: ObservableObject {
     private let calendar: Calendar
     private let mockUSDTToARSRate: Int
     private let persistence: AppStatePersisting?
+    private let gymHealthEngine: GymHealthEngine
 
     init(
         currentDate: Date = MockData.today,
@@ -117,6 +119,7 @@ final class AppStore: ObservableObject {
         self.calendar = calendar
         self.mockUSDTToARSRate = mockUSDTToARSRate
         self.persistence = persistence
+        self.gymHealthEngine = GymHealthEngine(calendar: calendar)
 
         let restoredState: PersistedAppState?
         do {
@@ -161,7 +164,7 @@ final class AppStore: ObservableObject {
         DashboardViewState(
             latestWeight: weightLogs.latest,
             todayHealth: dailyHealthLog(on: currentDate),
-            weeklyGymCount: recentHealthLogs.gymAttendanceCount,
+            weeklyGymCount: gymHealthProgress.completedWorkouts,
             dailyOrderPlan: dailyOrderPlan,
             activeCriticalTasks: activeCriticalTasks,
             upcomingDeadlines: activeUpcomingDeadlines,
@@ -172,14 +175,17 @@ final class AppStore: ObservableObject {
     }
 
     var gymHealthState: GymHealthViewState {
-        GymHealthViewState(
+        let progress = gymHealthProgress
+
+        return GymHealthViewState(
             latestWeight: weightLogs.latest,
             todayHealth: dailyHealthLog(on: currentDate),
-            weeklyCalories: recentHealthLogs.totalCalories,
-            gymAttendance: recentHealthLogs.gymAttendanceCount,
+            weeklyCalories: progress.weeklyCaloriesConsumed,
+            gymAttendance: progress.completedWorkouts,
             averageSleepHours: recentHealthLogs.averageSleepHours,
             weightGoal: weightGoal,
-            dailyOrderPlan: dailyOrderPlan
+            dailyOrderPlan: dailyOrderPlan,
+            progress: progress
         )
     }
 
@@ -528,6 +534,15 @@ final class AppStore: ObservableObject {
 
     private var allUniversityTasks: [AcademicTask] {
         criticalTasks + upcomingDeadlines
+    }
+
+    private var gymHealthProgress: GymHealthProgress {
+        gymHealthEngine.progress(
+            weightGoal: weightGoal,
+            weightLogs: weightLogs,
+            dailyHealthLogs: dailyHealthLogs,
+            referenceDate: currentDate
+        )
     }
 
     private var recentHealthLogs: [DailyHealthLog] {

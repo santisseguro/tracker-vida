@@ -191,6 +191,32 @@ final class DomainModelTests: XCTestCase {
         XCTAssertEqual(decoded.moneyTransactions.map(\.title), state.moneyTransactions.map(\.title))
     }
 
+    func testWeightGoalDecodesLegacyJSONWithDefaultHealthConfig() throws {
+        let legacyJSON = """
+        {
+          "metadata": {
+            "id": "00000000-0000-0000-0000-000000000777",
+            "createdAt": "2026-06-01T03:00:00Z",
+            "updatedAt": "2026-06-01T03:00:00Z"
+          },
+          "targetWeightKg": 78,
+          "startWeightKg": 84,
+          "startDate": "2026-06-01T03:00:00Z",
+          "targetDate": "2026-09-01T03:00:00Z",
+          "isActive": true
+        }
+        """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        let goal = try decoder.decode(WeightGoal.self, from: Data(legacyJSON.utf8))
+
+        XCTAssertEqual(goal.gymDayCalorieTarget, 2_300)
+        XCTAssertEqual(goal.restDayCalorieTarget, 2_000)
+        XCTAssertEqual(goal.targetWorkoutsPerWeek, 5)
+        XCTAssertEqual(goal.idealGymWeekdays, [2, 3, 4, 5, 6])
+    }
+
     @MainActor
     func testStoreUsesSeedDataWhenNoSavedStateExists() {
         let persistence = InMemoryAppStatePersistence(state: nil)
@@ -269,6 +295,104 @@ final class DomainModelTests: XCTestCase {
     func testGymHealthV1ChoiceSets() {
         XCTAssertEqual(WorkoutType.allCases.map(\.rawValue), ["Push", "Pull", "Legs", "Full Body", "Cardio", "Other"])
         XCTAssertEqual(SleepQuality.allCases.map(\.rawValue), ["Good", "Normal", "Bad"])
+    }
+
+    func testGymHealthSevenDayMovingAverage() {
+        let engine = GymHealthEngine(calendar: MockData.calendar)
+        let referenceDate = MockData.today
+        let logs = [
+            WeightLog(metadata: BaseMetadata(), date: MockData.makeDate(year: 2026, month: 6, day: 21), weightKg: 95, source: MockData.healthSource),
+            WeightLog(metadata: BaseMetadata(), date: MockData.makeDate(year: 2026, month: 6, day: 22), weightKg: 82, source: MockData.healthSource),
+            WeightLog(metadata: BaseMetadata(), date: MockData.makeDate(year: 2026, month: 6, day: 25), weightKg: 81, source: MockData.healthSource),
+            WeightLog(metadata: BaseMetadata(), date: referenceDate, weightKg: 80, source: MockData.healthSource)
+        ]
+
+        XCTAssertEqual(engine.sevenDayMovingAverageWeight(from: logs, referenceDate: referenceDate) ?? 0, 81, accuracy: 0.001)
+    }
+
+    func testGymHealthDailyCalorieDelta() {
+        let engine = GymHealthEngine(calendar: MockData.calendar)
+        let todayLog = MockData.dailyHealthLogs.first { MockData.calendar.isDate($0.date, inSameDayAs: MockData.today) }
+        let target = engine.dailyCalorieTarget(for: MockData.today, log: todayLog, goal: MockData.weightGoal)
+
+        XCTAssertEqual(target, 2_000)
+        XCTAssertEqual(engine.dailyCalorieDelta(consumed: todayLog?.totalCalories, target: target), -160)
+    }
+
+    func testGymHealthWeeklyCalorieDelta() {
+        let engine = GymHealthEngine(calendar: MockData.calendar)
+        let target = engine.weeklyCalorieTarget(
+            goal: MockData.weightGoal,
+            dailyHealthLogs: MockData.dailyHealthLogs,
+            referenceDate: MockData.today
+        )
+        let consumed = engine.weeklyCaloriesConsumed(from: MockData.dailyHealthLogs, referenceDate: MockData.today)
+
+        XCTAssertEqual(target, 15_500)
+        XCTAssertEqual(consumed, 13_790)
+        XCTAssertEqual(engine.weeklyCalorieDelta(consumed: consumed, target: target), -1_710)
+    }
+
+    func testGymHealthGymProgressAndWeightRemaining() {
+        let engine = GymHealthEngine(calendar: MockData.calendar)
+        let progress = engine.progress(
+            weightGoal: MockData.weightGoal,
+            weightLogs: MockData.weightLogs,
+            dailyHealthLogs: MockData.dailyHealthLogs,
+            referenceDate: MockData.today
+        )
+
+        XCTAssertEqual(progress.currentWeightKg, 81.8)
+        XCTAssertEqual(progress.weightRemainingKg ?? 0, 3.8, accuracy: 0.001)
+        XCTAssertEqual(progress.completedWorkouts, 4)
+        XCTAssertEqual(progress.targetWorkouts, 5)
+    }
+
+    func testGymHealthEstimatedImpactFromCalorieDelta() {
+        let engine = GymHealthEngine(calendar: MockData.calendar)
+
+        XCTAssertEqual(engine.estimatedWeightImpactKg(fromCalorieDelta: -1_710), -0.222, accuracy: 0.001)
+    }
+
+    func testGymHealthTrackStatusStates() {
+        let engine = GymHealthEngine(calendar: MockData.calendar)
+
+        XCTAssertEqual(
+            engine.trackStatus(
+                currentWeightKg: 82,
+                targetWeightKg: 78,
+                targetDate: nil,
+                estimatedTargetDate: nil,
+                weeklyCalorieDelta: -100,
+                completedWorkouts: 5,
+                targetWorkouts: 5
+            ),
+            .onTrack
+        )
+        XCTAssertEqual(
+            engine.trackStatus(
+                currentWeightKg: 82,
+                targetWeightKg: 78,
+                targetDate: nil,
+                estimatedTargetDate: nil,
+                weeklyCalorieDelta: -1_000,
+                completedWorkouts: 5,
+                targetWorkouts: 5
+            ),
+            .ahead
+        )
+        XCTAssertEqual(
+            engine.trackStatus(
+                currentWeightKg: 82,
+                targetWeightKg: 78,
+                targetDate: nil,
+                estimatedTargetDate: nil,
+                weeklyCalorieDelta: 1_000,
+                completedWorkouts: 5,
+                targetWorkouts: 5
+            ),
+            .behind
+        )
     }
 
     func testUniversityV1ChoiceSets() {
