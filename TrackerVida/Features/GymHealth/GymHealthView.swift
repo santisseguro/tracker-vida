@@ -9,7 +9,7 @@ struct GymHealthView: View {
     var body: some View {
         ScreenScaffold(
             title: "Body Dashboard",
-            subtitle: "Weight, calories, gym attendance, sleep, and today's mock order."
+            subtitle: "Weight, calories, gym attendance, sleep, and today's local order."
         ) {
             AppCard(tint: AppTheme.Colors.health) {
                 HStack(alignment: .top) {
@@ -61,7 +61,7 @@ struct GymHealthView: View {
                     Text("AI order checklist")
                         .font(.headline.weight(.bold))
                     Spacer()
-                    StatusPill(text: "Mock", tint: AppTheme.Colors.ai)
+                    StatusPill(text: "Local", tint: AppTheme.Colors.ai)
                 }
 
                 ForEach(state.dailyOrderPlan.orders.first?.checklist ?? []) { item in

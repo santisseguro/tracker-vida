@@ -232,7 +232,8 @@ final class DomainModelTests: XCTestCase {
 
     @MainActor
     func testStoreRestoresSavedState() {
-        var plan = MockData.dailyOrderPlan
+        let generatedPlan = makeGeneratedHealthOrderPlan()
+        var plan = generatedPlan
         plan.orders[0].checklist[0].status = .done
 
         var task = MockData.criticalTasks[0]
@@ -393,6 +394,90 @@ final class DomainModelTests: XCTestCase {
             ),
             .behind
         )
+    }
+
+    func testGymHealthOrderGeneratorBehindStateCreatesStrictCorrection() {
+        let generator = GymHealthDailyOrderGenerator(calendar: MockData.calendar)
+        let plan = generator.generate(
+            progress: makeProgress(trackStatus: .behind, weeklyCalorieDelta: 900, completedWorkouts: 2, targetWorkouts: 5),
+            date: MockData.today,
+            todayHealth: nil,
+            hasWeightLogToday: true,
+            existingPlan: nil
+        )
+
+        XCTAssertEqual(plan.orders.first?.title, "Correct the plan today.")
+        XCTAssertEqual(plan.orders.first?.priority, .urgent)
+        XCTAssertTrue(plan.summary?.contains("You are behind") == true)
+    }
+
+    func testGymHealthOrderGeneratorOnTrackMaintainsPlan() {
+        let generator = GymHealthDailyOrderGenerator(calendar: MockData.calendar)
+        let plan = generator.generate(
+            progress: makeProgress(trackStatus: .onTrack, weeklyCalorieDelta: -100, completedWorkouts: 5, targetWorkouts: 5),
+            date: MockData.today,
+            todayHealth: DailyHealthLog(metadata: BaseMetadata(), date: MockData.today, totalCalories: 2_000, gymAttended: true, sleepHours: 7.4, sleepQuality: .good, source: MockData.healthSource),
+            hasWeightLogToday: true,
+            existingPlan: nil
+        )
+
+        XCTAssertEqual(plan.orders.first?.title, "Hold the plan today.")
+        XCTAssertTrue(plan.summary?.contains("You are on track") == true)
+        XCTAssertTrue(plan.orders.first?.checklist.contains { $0.title.contains("Maintain calories") } == true)
+    }
+
+    func testGymHealthOrderGeneratorOverCalorieDayCreatesCalorieItem() {
+        let generator = GymHealthDailyOrderGenerator(calendar: MockData.calendar)
+        let plan = generator.generate(
+            progress: makeProgress(trackStatus: .behind, dailyCalorieDelta: 450, weeklyCalorieDelta: 900),
+            date: MockData.today,
+            todayHealth: DailyHealthLog(metadata: BaseMetadata(), date: MockData.today, totalCalories: 2_450, gymAttended: false, sleepHours: 7, sleepQuality: .normal, source: MockData.healthSource),
+            hasWeightLogToday: true,
+            existingPlan: nil
+        )
+
+        XCTAssertTrue(plan.orders.first?.checklist.contains { $0.title.contains("Correct calories by 450") } == true)
+    }
+
+    func testGymHealthOrderGeneratorMissingWeightCreatesWeightItem() {
+        let generator = GymHealthDailyOrderGenerator(calendar: MockData.calendar)
+        let plan = generator.generate(
+            progress: makeProgress(trackStatus: .onTrack),
+            date: MockData.today,
+            todayHealth: DailyHealthLog(metadata: BaseMetadata(), date: MockData.today, totalCalories: 2_000, gymAttended: true, sleepHours: 7, sleepQuality: .good, source: MockData.healthSource),
+            hasWeightLogToday: false,
+            existingPlan: nil
+        )
+
+        XCTAssertTrue(plan.orders.first?.checklist.contains { $0.title == "Log today's weight. No guessing." } == true)
+    }
+
+    func testGymHealthOrderGeneratorGymAtRiskCreatesGymItem() {
+        let generator = GymHealthDailyOrderGenerator(calendar: MockData.calendar)
+        let plan = generator.generate(
+            progress: makeProgress(trackStatus: .behind, completedWorkouts: 3, targetWorkouts: 5),
+            date: MockData.today,
+            todayHealth: DailyHealthLog(metadata: BaseMetadata(), date: MockData.today, totalCalories: 2_000, gymAttended: false, sleepHours: 7, sleepQuality: .good, source: MockData.healthSource),
+            hasWeightLogToday: true,
+            existingPlan: nil
+        )
+
+        XCTAssertTrue(plan.orders.first?.checklist.contains { $0.title.contains("Train today") } == true)
+    }
+
+    @MainActor
+    func testGeneratedChecklistPersistsThroughAppStorePersistence() {
+        let persistence = InMemoryAppStatePersistence(state: nil)
+        let store = AppStore(currentDate: MockData.today, persistence: persistence)
+        let itemID = store.dailyOrderPlan.orders[0].checklist[0].id
+
+        store.toggleDailyChecklistItem(itemID)
+
+        let savedState = persistence.savedStates.last
+        let restoredPersistence = InMemoryAppStatePersistence(state: savedState)
+        let restoredStore = AppStore(currentDate: MockData.today, persistence: restoredPersistence)
+
+        XCTAssertEqual(restoredStore.dailyOrderPlan.orders[0].checklist.first { $0.id == itemID }?.status, .done)
     }
 
     func testUniversityV1ChoiceSets() {
@@ -617,6 +702,48 @@ final class DomainModelTests: XCTestCase {
         XCTAssertEqual(store.gymHealthState.gymAttendance, 4)
         XCTAssertEqual(store.gymHealthState.weeklyCalories, 13_790)
     }
+}
+
+private func makeProgress(
+    trackStatus: GymHealthTrackStatus,
+    dailyCalorieDelta: Int? = nil,
+    weeklyCalorieDelta: Int = 0,
+    completedWorkouts: Int = 5,
+    targetWorkouts: Int = 5
+) -> GymHealthProgress {
+    GymHealthProgress(
+        currentWeightKg: 82,
+        sevenDayAverageWeightKg: 82.2,
+        weightRemainingKg: 4,
+        dailyCalorieTarget: 2_000,
+        weeklyCalorieTarget: 14_000,
+        weeklyCaloriesConsumed: 14_000 + weeklyCalorieDelta,
+        dailyCalorieDelta: dailyCalorieDelta,
+        weeklyCalorieDelta: weeklyCalorieDelta,
+        estimatedWeightImpactKg: Double(weeklyCalorieDelta) / 7_700,
+        estimatedTargetDate: nil,
+        completedWorkouts: completedWorkouts,
+        targetWorkouts: targetWorkouts,
+        trackStatus: trackStatus
+    )
+}
+
+private func makeGeneratedHealthOrderPlan() -> AIGeneratedDailyOrderPlan {
+    let engine = GymHealthEngine(calendar: MockData.calendar)
+    let generator = GymHealthDailyOrderGenerator(calendar: MockData.calendar)
+
+    return generator.generate(
+        progress: engine.progress(
+            weightGoal: MockData.weightGoal,
+            weightLogs: MockData.weightLogs,
+            dailyHealthLogs: MockData.dailyHealthLogs,
+            referenceDate: MockData.today
+        ),
+        date: MockData.today,
+        todayHealth: MockData.dailyHealthLogs.first { MockData.calendar.isDate($0.date, inSameDayAs: MockData.today) },
+        hasWeightLogToday: MockData.weightLogs.contains { MockData.calendar.isDate($0.date, inSameDayAs: MockData.today) },
+        existingPlan: nil
+    )
 }
 
 private final class InMemoryAppStatePersistence: AppStatePersisting {

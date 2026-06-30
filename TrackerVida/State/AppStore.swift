@@ -97,6 +97,7 @@ final class AppStore: ObservableObject {
     private let mockUSDTToARSRate: Int
     private let persistence: AppStatePersisting?
     private let gymHealthEngine: GymHealthEngine
+    private let dailyOrderGenerator: GymHealthDailyOrderGenerator
 
     init(
         currentDate: Date = MockData.today,
@@ -120,6 +121,7 @@ final class AppStore: ObservableObject {
         self.mockUSDTToARSRate = mockUSDTToARSRate
         self.persistence = persistence
         self.gymHealthEngine = GymHealthEngine(calendar: calendar)
+        self.dailyOrderGenerator = GymHealthDailyOrderGenerator(calendar: calendar)
 
         let restoredState: PersistedAppState?
         do {
@@ -144,6 +146,7 @@ final class AppStore: ObservableObject {
             self.moneyAccounts = restoredState.moneyAccounts
             self.moneyTransactions = restoredState.moneyTransactions
             self.settingsSections = settingsSections
+            refreshDailyOrder(save: false)
             return
         }
 
@@ -158,6 +161,7 @@ final class AppStore: ObservableObject {
         self.moneyAccounts = moneyAccounts
         self.moneyTransactions = moneyTransactions
         self.settingsSections = settingsSections
+        refreshDailyOrder(save: false)
     }
 
     var dashboardState: DashboardViewState {
@@ -246,6 +250,7 @@ final class AppStore: ObservableObject {
         }
 
         weightLogs.sort { $0.date < $1.date }
+        refreshDailyOrder(save: false)
         saveState()
     }
 
@@ -288,6 +293,7 @@ final class AppStore: ObservableObject {
         }
 
         dailyHealthLogs.sort { $0.date < $1.date }
+        refreshDailyOrder(save: false)
         saveState()
     }
 
@@ -727,6 +733,20 @@ final class AppStore: ObservableObject {
             moneyAccounts: moneyAccounts,
             moneyTransactions: moneyTransactions
         )
+    }
+
+    private func refreshDailyOrder(save shouldSave: Bool) {
+        dailyOrderPlan = dailyOrderGenerator.generate(
+            progress: gymHealthProgress,
+            date: currentDate,
+            todayHealth: dailyHealthLog(on: currentDate),
+            hasWeightLogToday: weightLog(on: currentDate) != nil,
+            existingPlan: dailyOrderPlan
+        )
+
+        if shouldSave {
+            saveState()
+        }
     }
 
     private func saveState() {

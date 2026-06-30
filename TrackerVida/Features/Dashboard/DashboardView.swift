@@ -13,16 +13,16 @@ struct DashboardView: View {
         ) {
             AppCard(tint: AppTheme.Colors.ai) {
                 HStack(alignment: .top) {
-                    StatusPill(text: "Mock AI order", tint: AppTheme.Colors.ai)
+                    StatusPill(text: "Rule-based order", tint: AppTheme.Colors.ai)
                     Spacer()
                     Text("\(dailyOrdersState.completedItems)/\(dailyOrdersState.totalItems)")
                         .font(.headline.weight(.bold))
                         .foregroundStyle(AppTheme.Colors.ai)
                 }
 
-                Text("Move with intention.")
+                Text(state.dailyOrderPlan.orders.first?.title ?? "Hold the plan today.")
                     .font(.title.weight(.bold))
-                Text(state.dailyOrderPlan.summary ?? "Static daily order preview.")
+                Text(state.dailyOrderPlan.summary ?? "Local rule-based daily order.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineSpacing(2)
