@@ -17,6 +17,7 @@ struct GymHealthView: View {
                 latestCommand: store.latestCapturedAICommand(for: .gymHealth)
             ) { command in
                 store.captureAICommand(command, context: .gymHealth)
+                return true
             }
 
             AppCard(tint: AppTheme.Colors.health) {

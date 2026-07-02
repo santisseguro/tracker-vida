@@ -16,6 +16,7 @@ struct UniversityView: View {
                 latestCommand: store.latestCapturedAICommand(for: .university)
             ) { command in
                 store.captureAICommand(command, context: .university)
+                return true
             }
 
             AppCard(tint: AppTheme.Colors.university) {

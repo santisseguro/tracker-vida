@@ -16,6 +16,7 @@ struct DashboardView: View {
                 latestCommand: store.latestCapturedAICommand(for: .dashboard)
             ) { command in
                 store.captureAICommand(command, context: .dashboard)
+                return true
             }
 
             AppCard(tint: AppTheme.Colors.ai) {

@@ -6,6 +6,7 @@ struct MoneyView: View {
     @State private var activeSheet: MoneySheet?
     @State private var primaryCurrency: CurrencyCode = .usdt
     @State private var trendRange: MoneyTrendRange = .daily
+    @State private var conversationState = MoneyConversationState()
 
     private var state: MoneyViewState { store.moneyState }
 
@@ -16,9 +17,10 @@ struct MoneyView: View {
         ) {
             AICommandBar(
                 context: .money,
-                latestCommand: store.latestCapturedAICommand(for: .money)
+                latestCommand: nil,
+                assistantResponse: conversationState.latestAssistantResponse
             ) { command in
-                store.captureAICommand(command, context: .money)
+                handleMoneyCommand(command)
             }
 
             AppCard(tint: AppTheme.Colors.money) {
@@ -165,6 +167,11 @@ struct MoneyView: View {
                     .environmentObject(store)
             }
         }
+    }
+
+    private func handleMoneyCommand(_ command: String) -> Bool {
+        MoneyConversationEngine.handle(command, state: &conversationState, store: store, date: store.currentDate)
+        return true
     }
 
     private var primaryTotalText: String {

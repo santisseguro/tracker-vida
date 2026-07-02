@@ -3,7 +3,9 @@ import SwiftUI
 struct AICommandBar: View {
     var context: AICommandContext
     var latestCommand: CapturedAICommand?
-    var submit: (String) -> Void
+    var feedback: AICommandBarFeedback? = nil
+    var assistantResponse: String? = nil
+    var submit: (String) -> Bool
 
     @State private var text = ""
     @StateObject private var speechInput = SpeechInputService()
@@ -21,6 +23,8 @@ struct AICommandBar: View {
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1...3)
                     .submitLabel(.send)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
                     .onSubmit(submitCommand)
 
                 Button {
@@ -59,7 +63,36 @@ struct AICommandBar: View {
                     .foregroundStyle(AppTheme.Colors.warning)
             }
 
-            if let latestCommand {
+            if let feedback {
+                Label(feedback.message, systemImage: feedback.symbol)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(feedback.tint)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.82)
+            } else if let assistantResponse {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(AppTheme.Colors.ai)
+                        .frame(width: 18, height: 18)
+                        .background(AppTheme.Colors.ai.opacity(0.12), in: Circle())
+
+                    Text(assistantResponse)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
+                        .minimumScaleFactor(0.82)
+
+                    Spacer(minLength: 8)
+
+                    Text("Local")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(AppTheme.Colors.ai)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(AppTheme.Colors.ai.opacity(0.12), in: Capsule())
+                }
+            } else if let latestCommand {
                 Label(latestCommand.confirmationText, systemImage: "checkmark.circle.fill")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(context.tint)
@@ -78,8 +111,37 @@ struct AICommandBar: View {
         guard !command.isEmpty else { return }
 
         speechInput.stopListening()
-        submit(command)
-        text = ""
+        if submit(command) {
+            text = ""
+        }
+    }
+}
+
+struct AICommandBarFeedback: Equatable {
+    enum Kind: Equatable {
+        case confirmation
+        case warning
+    }
+
+    var message: String
+    var kind: Kind
+
+    var symbol: String {
+        switch kind {
+        case .confirmation:
+            return "checkmark.circle.fill"
+        case .warning:
+            return "exclamationmark.triangle.fill"
+        }
+    }
+
+    var tint: Color {
+        switch kind {
+        case .confirmation:
+            return AppTheme.Colors.ai
+        case .warning:
+            return AppTheme.Colors.warning
+        }
     }
 }
 
