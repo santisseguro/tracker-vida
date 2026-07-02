@@ -14,6 +14,13 @@ struct MoneyView: View {
             title: "Balances",
             subtitle: "ARS, USDT, account balances, recent movements, and text registration preview."
         ) {
+            AICommandBar(
+                context: .money,
+                latestCommand: store.latestCapturedAICommand(for: .money)
+            ) { command in
+                store.captureAICommand(command, context: .money)
+            }
+
             AppCard(tint: AppTheme.Colors.money) {
                 HStack {
                     StatusPill(text: "\(state.activeAccounts.count) accounts", tint: AppTheme.Colors.money)

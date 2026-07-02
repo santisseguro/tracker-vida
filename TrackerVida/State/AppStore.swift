@@ -100,6 +100,7 @@ final class AppStore: ObservableObject {
     @Published var moneyAccounts: [MoneyAccount]
     @Published var moneyTransactions: [MoneyTransaction]
     @Published var settingsSections: [SimpleListItem]
+    @Published private(set) var capturedAICommands: [CapturedAICommand] = []
 
     private let calendar: Calendar
     private let mockUSDTToARSRate: Int
@@ -228,6 +229,19 @@ final class AppStore: ObservableObject {
             totalItems: items.count,
             completedItems: completed
         )
+    }
+
+    func latestCapturedAICommand(for context: AICommandContext) -> CapturedAICommand? {
+        capturedAICommands.first { $0.context == context }
+    }
+
+    @discardableResult
+    func captureAICommand(_ text: String, context: AICommandContext, createdAt: Date = .now) -> CapturedAICommand? {
+        let command = CapturedAICommand(context: context, text: text, createdAt: createdAt)
+        guard !command.text.isEmpty else { return nil }
+
+        capturedAICommands.insert(command, at: 0)
+        return command
     }
 
     func weightLog(on date: Date) -> WeightLog? {

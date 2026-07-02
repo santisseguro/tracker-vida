@@ -12,6 +12,13 @@ struct GymHealthView: View {
             title: "Body Dashboard",
             subtitle: "Weight, calories, gym attendance, sleep, and today's local order."
         ) {
+            AICommandBar(
+                context: .gymHealth,
+                latestCommand: store.latestCapturedAICommand(for: .gymHealth)
+            ) { command in
+                store.captureAICommand(command, context: .gymHealth)
+            }
+
             AppCard(tint: AppTheme.Colors.health) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 6) {

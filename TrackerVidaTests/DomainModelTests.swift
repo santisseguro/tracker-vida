@@ -2,6 +2,35 @@ import XCTest
 @testable import TrackerVida
 
 final class DomainModelTests: XCTestCase {
+    func testCapturedAICommandTrimsTextAndConfirmsContext() {
+        let command = CapturedAICommand(
+            id: EntityID(uuidString: "00000000-0000-0000-0000-00000000A001")!,
+            context: .money,
+            text: "  log expense 12000 comida  ",
+            createdAt: MockData.today
+        )
+
+        XCTAssertEqual(command.text, "log expense 12000 comida")
+        XCTAssertEqual(command.context, .money)
+        XCTAssertEqual(command.confirmationText, "Captured for Money")
+    }
+
+    @MainActor
+    func testStoreCapturesAICommandsInMemoryByContext() {
+        let store = AppStore(currentDate: MockData.today)
+
+        let emptyCommand = store.captureAICommand("   ", context: .dashboard, createdAt: MockData.today)
+        let dashboardCommand = store.captureAICommand("Review today", context: .dashboard, createdAt: MockData.today)
+        let moneyCommand = store.captureAICommand("Log income 20000", context: .money, createdAt: MockData.today)
+
+        XCTAssertNil(emptyCommand)
+        XCTAssertEqual(dashboardCommand?.text, "Review today")
+        XCTAssertEqual(moneyCommand?.context, .money)
+        XCTAssertEqual(store.latestCapturedAICommand(for: .dashboard)?.text, "Review today")
+        XCTAssertEqual(store.latestCapturedAICommand(for: .money)?.text, "Log income 20000")
+        XCTAssertEqual(store.capturedAICommands.count, 2)
+    }
+
     func testGymHealthMockSummaries() {
         XCTAssertEqual(MockData.dailyHealthLogs.gymAttendanceCount, 4)
         XCTAssertEqual(MockData.weightLogs.latest?.weightKg, 81.8)

@@ -11,6 +11,13 @@ struct DashboardView: View {
             title: "Today",
             subtitle: "Your personal command center for health, study, and money."
         ) {
+            AICommandBar(
+                context: .dashboard,
+                latestCommand: store.latestCapturedAICommand(for: .dashboard)
+            ) { command in
+                store.captureAICommand(command, context: .dashboard)
+            }
+
             AppCard(tint: AppTheme.Colors.ai) {
                 HStack(alignment: .top) {
                     StatusPill(text: "Rule-based order", tint: AppTheme.Colors.ai)

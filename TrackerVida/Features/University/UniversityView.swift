@@ -11,6 +11,13 @@ struct UniversityView: View {
             title: "Study Cockpit",
             subtitle: "Critical tasks, upcoming deadlines, replies, and timeline preview."
         ) {
+            AICommandBar(
+                context: .university,
+                latestCommand: store.latestCapturedAICommand(for: .university)
+            ) { command in
+                store.captureAICommand(command, context: .university)
+            }
+
             AppCard(tint: AppTheme.Colors.university) {
                 HStack {
                     StatusPill(text: "Focus block", tint: AppTheme.Colors.university)
