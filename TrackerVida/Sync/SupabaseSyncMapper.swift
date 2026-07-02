@@ -237,6 +237,7 @@ private extension SupabaseSyncMapper {
             currentBalanceMinorUnits: account.currentBalance.minorUnits,
             kind: account.kind.rawValue,
             status: account.status.rawValue,
+            color: account.color.rawValue,
             notes: account.notes,
             createdAt: account.metadata.createdAt,
             updatedAt: account.metadata.updatedAt,
@@ -254,6 +255,7 @@ private extension SupabaseSyncMapper {
             currentBalance: MoneyAmount(minorUnits: dto.currentBalanceMinorUnits, currency: currency),
             kind: MoneyAccountKind(rawValue: dto.kind) ?? .other,
             status: MoneyAccountStatus(rawValue: dto.status) ?? .active,
+            color: MoneyAccountColor(rawValue: dto.color) ?? .money,
             notes: dto.notes
         )
     }

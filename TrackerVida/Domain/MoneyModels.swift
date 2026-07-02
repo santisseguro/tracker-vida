@@ -24,6 +24,34 @@ enum MoneyAccountStatus: String, CaseIterable, Codable, Identifiable {
     var id: String { rawValue }
 }
 
+enum MoneyAccountColor: String, CaseIterable, Codable, Identifiable {
+    case money
+    case primary
+    case health
+    case university
+    case warning
+    case ai
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .money:
+            return "Cyan"
+        case .primary:
+            return "Blue"
+        case .health:
+            return "Green"
+        case .university:
+            return "Red"
+        case .warning:
+            return "Orange"
+        case .ai:
+            return "Purple"
+        }
+    }
+}
+
 enum MoneyTransactionKind: String, CaseIterable, Codable, Identifiable {
     case income = "Income"
     case expense = "Expense"
@@ -83,9 +111,82 @@ struct MoneyAccount: Codable, Hashable, Identifiable {
     var currentBalance: MoneyAmount
     var kind: MoneyAccountKind
     var status: MoneyAccountStatus
+    var color: MoneyAccountColor
     var notes: String? = nil
 
     var id: EntityID { metadata.id }
+
+    init(
+        metadata: BaseMetadata,
+        name: String,
+        currency: CurrencyCode,
+        currentBalance: MoneyAmount,
+        kind: MoneyAccountKind,
+        status: MoneyAccountStatus,
+        color: MoneyAccountColor = .money,
+        notes: String? = nil
+    ) {
+        self.metadata = metadata
+        self.name = name
+        self.currency = currency
+        self.currentBalance = currentBalance
+        self.kind = kind
+        self.status = status
+        self.color = color
+        self.notes = notes
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case metadata
+        case name
+        case currency
+        case currentBalance
+        case kind
+        case status
+        case color
+        case notes
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        metadata = try container.decode(BaseMetadata.self, forKey: .metadata)
+        name = try container.decode(String.self, forKey: .name)
+        currency = try container.decode(CurrencyCode.self, forKey: .currency)
+        currentBalance = try container.decode(MoneyAmount.self, forKey: .currentBalance)
+        kind = try container.decode(MoneyAccountKind.self, forKey: .kind)
+        status = try container.decode(MoneyAccountStatus.self, forKey: .status)
+        if container.contains(.color) {
+            color = try container.decodeIfPresent(MoneyAccountColor.self, forKey: .color) ?? .money
+        } else {
+            color = Self.legacyDefaultColor(for: metadata.id)
+        }
+        notes = try container.decodeIfPresent(String.self, forKey: .notes)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(metadata, forKey: .metadata)
+        try container.encode(name, forKey: .name)
+        try container.encode(currency, forKey: .currency)
+        try container.encode(currentBalance, forKey: .currentBalance)
+        try container.encode(kind, forKey: .kind)
+        try container.encode(status, forKey: .status)
+        try container.encode(color, forKey: .color)
+        try container.encodeIfPresent(notes, forKey: .notes)
+    }
+
+    private static func legacyDefaultColor(for id: EntityID) -> MoneyAccountColor {
+        switch id.uuidString.uppercased() {
+        case "00000000-0000-0000-0000-000000000201":
+            return .warning
+        case "00000000-0000-0000-0000-000000000202":
+            return .primary
+        case "00000000-0000-0000-0000-000000000203":
+            return .health
+        default:
+            return .money
+        }
+    }
 }
 
 struct AccountBalance: Codable, Hashable, Identifiable {

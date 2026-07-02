@@ -1,3 +1,4 @@
+import Charts
 import SwiftUI
 
 struct GymHealthView: View {
@@ -35,9 +36,29 @@ struct GymHealthView: View {
                 ProgressView(value: 0.58)
                     .tint(AppTheme.Colors.health)
             }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                presentHealthEntryForm()
+
+            AppCard(compact: true) {
+                Text("Log today")
+                    .font(.headline.weight(.bold))
+
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                    ForEach(HealthEntryMode.allCases) { mode in
+                        HealthActionButton(mode: mode) {
+                            presentHealthEntryForm(mode)
+                        }
+                    }
+                }
+            }
+
+            AppCard {
+                HStack {
+                    Text("Monthly weight trend")
+                        .font(.headline.weight(.bold))
+                    Spacer()
+                    StatusPill(text: "Local", tint: AppTheme.Colors.primary)
+                }
+
+                MonthlyWeightTrendChart(weightLogs: store.weightLogs, referenceDate: store.currentDate)
             }
 
             AppCard {
@@ -51,10 +72,6 @@ struct GymHealthView: View {
                     MetricTile(title: "Sleep average", value: "\(state.averageSleepHours.formatted(.number.precision(.fractionLength(1))))h", detail: "\(state.todayHealth?.sleepQuality?.rawValue ?? "Good") today", tint: AppTheme.Colors.ai, progress: state.averageSleepHours / 8)
                 }
             }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                presentHealthEntryForm()
-            }
 
             AppCard(tint: AppTheme.Colors.ai) {
                 HStack {
@@ -65,11 +82,9 @@ struct GymHealthView: View {
                 }
 
                 ForEach(state.dailyOrderPlan.orders.first?.checklist ?? []) { item in
-                    InfoRow(title: item.title, detail: item.priority.rawValue.capitalized, value: item.status.rawValue, symbol: "checklist", tint: AppTheme.Colors.ai)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            store.toggleDailyChecklistItem(item.id)
-                        }
+                    ChecklistActionRow(item: item) {
+                        store.toggleDailyChecklistItem(item.id)
+                    }
                 }
             }
         }
@@ -79,9 +94,10 @@ struct GymHealthView: View {
         }
     }
 
-    private func presentHealthEntryForm() {
+    private func presentHealthEntryForm(_ mode: HealthEntryMode) {
         let date = store.currentDate
         healthEntryDraft = HealthEntryFormDraft(
+            mode: mode,
             date: date,
             weightLog: store.weightLog(on: date),
             healthLog: store.dailyHealthLog(on: date)
@@ -96,8 +112,247 @@ struct GymHealthView: View {
     }
 }
 
+private struct MonthlyWeightTrendChart: View {
+    var weightLogs: [WeightLog]
+    var referenceDate: Date
+
+    private var points: [MonthlyWeightTrendPoint] {
+        MonthlyWeightTrendCalculator.points(weightLogs: weightLogs, referenceDate: referenceDate)
+    }
+
+    var body: some View {
+        if points.count >= 2 {
+            Chart(points) { point in
+                LineMark(
+                    x: .value("Date", point.date),
+                    y: .value("Weight", point.weightKg)
+                )
+                .foregroundStyle(AppTheme.Colors.primary)
+                .interpolationMethod(.catmullRom)
+
+                PointMark(
+                    x: .value("Date", point.date),
+                    y: .value("Weight", point.weightKg)
+                )
+                .foregroundStyle(AppTheme.Colors.primary)
+            }
+            .frame(height: 160)
+            .chartYScale(domain: yAxisDomain)
+            .chartYAxis {
+                AxisMarks(position: .leading) { value in
+                    AxisGridLine()
+                    AxisValueLabel {
+                        if let weight = value.as(Double.self) {
+                            Text("\(weight.formatted(.number.precision(.fractionLength(1))))")
+                        }
+                    }
+                }
+            }
+
+            HStack {
+                Text("\(points.first?.weightKg.formatted(.number.precision(.fractionLength(1))) ?? "--") kg")
+                Spacer()
+                Text(weightDeltaText)
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+        } else {
+            HStack(spacing: 12) {
+                Image(systemName: "chart.line.uptrend.xyaxis")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(AppTheme.Colors.primary)
+                    .frame(width: 36, height: 36)
+                    .background(AppTheme.Colors.primary.opacity(0.12), in: Circle())
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Not enough weight data yet")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Log weight at least twice this month to see variation.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(12)
+            .background(AppTheme.Colors.elevatedCard, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+    }
+
+    private var yAxisDomain: ClosedRange<Double> {
+        let weights = points.map(\.weightKg)
+        guard let minWeight = weights.min(), let maxWeight = weights.max() else {
+            return 0...1
+        }
+
+        return (minWeight - 1)...(maxWeight + 1)
+    }
+
+    private var weightDeltaText: String {
+        guard let first = points.first?.weightKg, let last = points.last?.weightKg else { return "-- kg" }
+
+        let delta = last - first
+        let prefix = delta > 0 ? "+" : ""
+        return "\(prefix)\(delta.formatted(.number.precision(.fractionLength(1)))) kg"
+    }
+}
+
+private struct MonthlyWeightTrendPoint: Identifiable {
+    var date: Date
+    var weightKg: Double
+
+    var id: String {
+        "\(date.timeIntervalSince1970)-\(weightKg)"
+    }
+}
+
+private enum MonthlyWeightTrendCalculator {
+    static func points(weightLogs: [WeightLog], referenceDate: Date, calendar: Calendar = .current) -> [MonthlyWeightTrendPoint] {
+        let endDate = calendar.startOfDay(for: referenceDate)
+        let startDate = calendar.date(byAdding: .day, value: -29, to: endDate) ?? endDate
+
+        return weightLogs
+            .filter { $0.date >= startDate && $0.date <= referenceDate }
+            .sorted { $0.date < $1.date }
+            .map { MonthlyWeightTrendPoint(date: $0.date, weightKg: $0.weightKg) }
+    }
+}
+
+private enum HealthEntryMode: String, CaseIterable, Identifiable {
+    case weight
+    case calories
+    case gym
+    case sleep
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .weight:
+            return "Weight"
+        case .calories:
+            return "Calories"
+        case .gym:
+            return "Gym"
+        case .sleep:
+            return "Sleep"
+        }
+    }
+
+    var navigationTitle: String {
+        switch self {
+        case .weight:
+            return "Log weight"
+        case .calories:
+            return "Log calories"
+        case .gym:
+            return "Log gym"
+        case .sleep:
+            return "Log sleep"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .weight:
+            return "scalemass.fill"
+        case .calories:
+            return "flame.fill"
+        case .gym:
+            return "figure.strengthtraining.traditional"
+        case .sleep:
+            return "moon.zzz.fill"
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .weight:
+            return AppTheme.Colors.primary
+        case .calories:
+            return AppTheme.Colors.warning
+        case .gym:
+            return AppTheme.Colors.health
+        case .sleep:
+            return AppTheme.Colors.ai
+        }
+    }
+}
+
+private struct HealthActionButton: View {
+    var mode: HealthEntryMode
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Image(systemName: mode.symbol)
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(mode.tint)
+                    .frame(width: 34, height: 34)
+                    .background(mode.tint.opacity(0.14), in: Circle())
+
+                Text(mode.title)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 74)
+            .background(AppTheme.Colors.elevatedCard, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(mode.navigationTitle)
+    }
+}
+
+private struct ChecklistActionRow: View {
+    var item: DailyChecklistItem
+    var action: () -> Void
+
+    private var isComplete: Bool {
+        item.status == .done || item.status == .skipped
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Button(action: action) {
+                Image(systemName: isComplete ? "checkmark.circle.fill" : "circle")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(isComplete ? AppTheme.Colors.health : AppTheme.Colors.ai)
+                    .frame(width: 34, height: 34)
+                    .background((isComplete ? AppTheme.Colors.health : AppTheme.Colors.ai).opacity(0.12), in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isComplete ? "Mark checklist item pending" : "Mark checklist item done")
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text(item.title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(isComplete ? .secondary : .primary)
+                    .strikethrough(isComplete, color: .secondary)
+                    .lineSpacing(2)
+
+                Text(item.priority.rawValue.capitalized)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 10)
+
+            StatusPill(text: isComplete ? "Done" : "Pending", tint: isComplete ? AppTheme.Colors.health : AppTheme.Colors.ai)
+        }
+        .padding(12)
+        .background(AppTheme.Colors.elevatedCard.opacity(isComplete ? 0.58 : 1), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder((isComplete ? AppTheme.Colors.health : AppTheme.Colors.ai).opacity(isComplete ? 0.22 : 0.08), lineWidth: 1)
+        )
+    }
+}
+
 private struct HealthEntryFormDraft: Identifiable {
     let id = UUID()
+    var mode: HealthEntryMode
     var date: Date
     var weightText: String
     var caloriesText: String
@@ -107,7 +362,8 @@ private struct HealthEntryFormDraft: Identifiable {
     var sleepHoursText: String
     var sleepQuality: SleepQuality
 
-    init(date: Date, weightLog: WeightLog?, healthLog: DailyHealthLog?) {
+    init(mode: HealthEntryMode, date: Date, weightLog: WeightLog?, healthLog: DailyHealthLog?) {
+        self.mode = mode
         self.date = date
         weightText = weightLog?.weightKg.formatted(.number.precision(.fractionLength(1))) ?? ""
         caloriesText = healthLog?.totalCalories.map(String.init) ?? ""
@@ -151,43 +407,51 @@ private struct HealthEntryFormView: View {
                     DatePicker("Entry date", selection: $draft.date, displayedComponents: .date)
                 }
 
-                Section("Weight") {
-                    TextField("Weight kg", text: $draft.weightText)
-                        .keyboardType(.decimalPad)
+                if draft.mode == .weight {
+                    Section("Weight") {
+                        TextField("Weight kg", text: $draft.weightText)
+                            .keyboardType(.decimalPad)
+                    }
                 }
 
-                Section("Calories") {
-                    TextField("Total calories", text: $draft.caloriesText)
-                        .keyboardType(.numberPad)
-                }
-
-                Section("Gym") {
-                    Toggle("Went to gym", isOn: $draft.gymAttended)
-
-                    if draft.gymAttended {
-                        TextField("Duration minutes", text: $draft.durationText)
+                if draft.mode == .calories {
+                    Section("Calories") {
+                        TextField("Total calories", text: $draft.caloriesText)
                             .keyboardType(.numberPad)
+                    }
+                }
 
-                        Picker("Workout type", selection: $draft.workoutType) {
-                            ForEach(WorkoutType.allCases) { type in
-                                Text(type.rawValue).tag(type)
+                if draft.mode == .gym {
+                    Section("Gym") {
+                        Toggle("Went to gym", isOn: $draft.gymAttended)
+
+                        if draft.gymAttended {
+                            TextField("Duration minutes", text: $draft.durationText)
+                                .keyboardType(.numberPad)
+
+                            Picker("Workout type", selection: $draft.workoutType) {
+                                ForEach(WorkoutType.allCases) { type in
+                                    Text(type.rawValue).tag(type)
+                                }
                             }
                         }
                     }
                 }
 
-                Section("Sleep") {
-                    TextField("Hours slept", text: $draft.sleepHoursText)
-                        .keyboardType(.decimalPad)
+                if draft.mode == .sleep {
+                    Section("Sleep") {
+                        TextField("Hours slept", text: $draft.sleepHoursText)
+                            .keyboardType(.decimalPad)
 
-                    Picker("Quality", selection: $draft.sleepQuality) {
-                        ForEach(SleepQuality.allCases) { quality in
-                            Text(quality.rawValue).tag(quality)
+                        Picker("Quality", selection: $draft.sleepQuality) {
+                            ForEach(SleepQuality.allCases) { quality in
+                                Text(quality.rawValue).tag(quality)
+                            }
                         }
                     }
                 }
             }
-            .navigationTitle("Health entry")
+            .navigationTitle(draft.mode.navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -211,6 +475,7 @@ private struct HealthEntryFormView: View {
 
     private func reloadDraft(for date: Date) {
         draft = HealthEntryFormDraft(
+            mode: draft.mode,
             date: date,
             weightLog: store.weightLog(on: date),
             healthLog: store.dailyHealthLog(on: date)
@@ -218,8 +483,9 @@ private struct HealthEntryFormView: View {
     }
 
     private func save() {
-        if let weightKg = draft.weightKg {
+        if draft.mode == .weight, let weightKg = draft.weightKg {
             store.upsertWeightLog(date: draft.date, weightKg: weightKg)
+            return
         }
 
         store.upsertDailyHealthLog(

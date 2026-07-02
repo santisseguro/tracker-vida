@@ -93,14 +93,14 @@ enum MockData {
     static let accountUSDT = UUID(uuidString: "00000000-0000-0000-0000-000000000203")!
 
     static let moneyAccounts = [
-        MoneyAccount(metadata: BaseMetadata(id: accountARS), name: "Efectivo ARS", currency: .ars, currentBalance: MoneyAmount(minorUnits: 82_400, currency: .ars), kind: .cash, status: .active),
-        MoneyAccount(metadata: BaseMetadata(id: accountBankARS), name: "Banco ARS", currency: .ars, currentBalance: MoneyAmount(minorUnits: 418_900, currency: .ars), kind: .bank, status: .active),
-        MoneyAccount(metadata: BaseMetadata(id: accountUSDT), name: "USDT Wallet", currency: .usdt, currentBalance: MoneyAmount(minorUnits: 1_240, currency: .usdt), kind: .cryptoWallet, status: .active)
+        MoneyAccount(metadata: BaseMetadata(id: accountARS), name: "Efectivo ARS", currency: .ars, currentBalance: MoneyAmount(minorUnits: 82_400, currency: .ars), kind: .cash, status: .active, color: .warning),
+        MoneyAccount(metadata: BaseMetadata(id: accountBankARS), name: "Banco ARS", currency: .ars, currentBalance: MoneyAmount(minorUnits: 418_900, currency: .ars), kind: .bank, status: .active, color: .primary),
+        MoneyAccount(metadata: BaseMetadata(id: accountUSDT), name: "USDT Wallet", currency: .usdt, currentBalance: MoneyAmount(minorUnits: 1_240, currency: .usdt), kind: .cryptoWallet, status: .active, color: .health)
     ]
 
     static let moneyTransactions = [
-        MoneyTransaction(metadata: BaseMetadata(), date: today, title: "Pago trabajo freelance", kind: .income, amount: MoneyAmount(minorUnits: 180_000, currency: .ars), toAccountID: accountBankARS, category: .income(.trabajo)),
-        MoneyTransaction(metadata: BaseMetadata(), date: today, title: "Almuerzo", kind: .expense, amount: MoneyAmount(minorUnits: 11_500, currency: .ars), fromAccountID: accountARS, category: .expense(.comida)),
+        MoneyTransaction(metadata: BaseMetadata(), date: today, title: "Pago trabajo freelance", kind: .income, amount: MoneyAmount(minorUnits: 180_000, currency: .ars), toAccountID: accountBankARS, category: .income(.trabajo), notes: "Proyecto personal"),
+        MoneyTransaction(metadata: BaseMetadata(), date: today, title: "Almuerzo", kind: .expense, amount: MoneyAmount(minorUnits: 11_500, currency: .ars), fromAccountID: accountARS, category: .expense(.comida), notes: "Efectivo"),
         MoneyTransaction(metadata: BaseMetadata(), date: makeDate(year: 2026, month: 6, day: 27), title: "ARS to USDT", kind: .transfer, amount: MoneyAmount(minorUnits: 150, currency: .usdt), fromAccountID: accountBankARS, toAccountID: accountUSDT)
     ]
 

@@ -35,6 +35,7 @@ final class DomainModelTests: XCTestCase {
 
         XCTAssertEqual(store.moneyAccount(id: account.id)?.name, "Mercado Pago")
         XCTAssertEqual(store.moneyAccount(id: account.id)?.currentBalance.minorUnits, 25_000)
+        XCTAssertEqual(store.moneyAccount(id: account.id)?.color, .money)
         XCTAssertEqual(store.moneyState.activeAccounts.count, 4)
     }
 
@@ -46,12 +47,14 @@ final class DomainModelTests: XCTestCase {
         account.name = "Efectivo diario"
         account.currentBalance = MoneyAmount(minorUnits: 90_000, currency: .ars)
         account.status = .archived
+        account.color = .ai
 
         store.updateMoneyAccount(account, updatedAt: MockData.today)
 
         XCTAssertEqual(store.moneyAccount(id: account.id)?.name, "Efectivo diario")
         XCTAssertEqual(store.moneyAccount(id: account.id)?.currentBalance.minorUnits, 90_000)
         XCTAssertEqual(store.moneyAccount(id: account.id)?.status, .archived)
+        XCTAssertEqual(store.moneyAccount(id: account.id)?.color, .ai)
         XCTAssertEqual(store.moneyState.activeAccounts.count, 2)
     }
 
@@ -65,13 +68,15 @@ final class DomainModelTests: XCTestCase {
             amount: 40_000,
             toAccountID: accountID,
             category: .trabajo,
-            date: MockData.today
+            date: MockData.today,
+            notes: "  Pago con nota  "
         )
 
         XCTAssertEqual(store.moneyAccount(id: accountID)?.currentBalance.minorUnits, 458_900)
         XCTAssertEqual(transaction?.category?.label, "Trabajo")
         XCTAssertEqual(transaction?.fromAccountID, nil)
         XCTAssertEqual(transaction?.toAccountID, accountID)
+        XCTAssertEqual(transaction?.notes, "Pago con nota")
     }
 
     @MainActor
@@ -84,13 +89,15 @@ final class DomainModelTests: XCTestCase {
             amount: 2_500,
             fromAccountID: accountID,
             category: .transporte,
-            date: MockData.today
+            date: MockData.today,
+            notes: "Saldado en efectivo"
         )
 
         XCTAssertEqual(store.moneyAccount(id: accountID)?.currentBalance.minorUnits, 79_900)
         XCTAssertEqual(transaction?.category?.label, "Transporte")
         XCTAssertEqual(transaction?.fromAccountID, accountID)
         XCTAssertEqual(transaction?.toAccountID, nil)
+        XCTAssertEqual(transaction?.notes, "Saldado en efectivo")
     }
 
     @MainActor
@@ -102,12 +109,14 @@ final class DomainModelTests: XCTestCase {
             amount: 10_000,
             fromAccountID: MockData.accountARS,
             toAccountID: MockData.accountBankARS,
-            date: MockData.today
+            date: MockData.today,
+            notes: "Cash deposit"
         )
 
         XCTAssertEqual(store.moneyAccount(id: MockData.accountARS)?.currentBalance.minorUnits, 72_400)
         XCTAssertEqual(store.moneyAccount(id: MockData.accountBankARS)?.currentBalance.minorUnits, 428_900)
         XCTAssertNil(transaction?.category)
+        XCTAssertEqual(transaction?.notes, "Cash deposit")
     }
 
     @MainActor
@@ -118,7 +127,8 @@ final class DomainModelTests: XCTestCase {
             title: "Cash recount",
             accountID: MockData.accountARS,
             newBalance: 80_000,
-            date: MockData.today
+            date: MockData.today,
+            notes: "Manual recount"
         )
 
         XCTAssertEqual(store.moneyAccount(id: MockData.accountARS)?.currentBalance.minorUnits, 80_000)
@@ -126,6 +136,7 @@ final class DomainModelTests: XCTestCase {
         XCTAssertEqual(transaction?.balanceBefore?.minorUnits, 82_400)
         XCTAssertEqual(transaction?.balanceAfter?.minorUnits, 80_000)
         XCTAssertNil(transaction?.category)
+        XCTAssertEqual(transaction?.notes, "Manual recount")
     }
 
     @MainActor
@@ -136,6 +147,8 @@ final class DomainModelTests: XCTestCase {
         XCTAssertEqual(store.dashboardState.moneyTotals.usdtMinorUnits, 1_240)
         XCTAssertEqual(store.dashboardState.moneyTotals.arsEquivalentMinorUnits, 1_741_300)
         XCTAssertEqual(store.dashboardState.moneyTotals.dashboardDisplay, "$1741K")
+        XCTAssertEqual(store.dashboardState.moneyTotals.arsEquivalentDisplay, "$1.741.300 ARS")
+        XCTAssertEqual(store.dashboardState.moneyTotals.usdtLabeledDisplay, "1.240 USDT")
 
         store.addIncomeTransaction(
             title: "Reembolso",
@@ -149,6 +162,30 @@ final class DomainModelTests: XCTestCase {
         XCTAssertEqual(store.dashboardState.moneyTotals.arsMinorUnits, 502_500)
         XCTAssertEqual(store.dashboardState.moneyTotals.arsEquivalentMinorUnits, 1_742_500)
         XCTAssertEqual(store.dashboardState.moneyTotals.dashboardDisplay, "$1742K")
+        XCTAssertEqual(store.dashboardState.moneyTotals.arsEquivalentDisplay, "$1.742.500 ARS")
+    }
+
+    func testMoneyTrendRangesUseDifferentSampling() {
+        let dailyPoints = MoneyBalanceTrendCalculator.points(
+            accounts: MockData.moneyAccounts,
+            transactions: MockData.moneyTransactions,
+            referenceDate: MockData.today,
+            usdtToARSRate: 1_000,
+            range: .daily,
+            calendar: MockData.calendar
+        )
+        let annualPoints = MoneyBalanceTrendCalculator.points(
+            accounts: MockData.moneyAccounts,
+            transactions: MockData.moneyTransactions,
+            referenceDate: MockData.today,
+            usdtToARSRate: 1_000,
+            range: .annual,
+            calendar: MockData.calendar
+        )
+
+        XCTAssertGreaterThan(annualPoints.count, dailyPoints.count)
+        XCTAssertTrue(dailyPoints.allSatisfy { $0.date >= MoneyTrendRange.daily.startDate(referenceDate: MockData.today, calendar: MockData.calendar) })
+        XCTAssertTrue(annualPoints.contains { MockData.calendar.component(.month, from: $0.date) != MockData.calendar.component(.month, from: MockData.today) })
     }
 
     func testDailyOrderCompletionRatio() {
@@ -188,7 +225,63 @@ final class DomainModelTests: XCTestCase {
         XCTAssertEqual(decoded.dailyOrderPlan.orders[0].checklist[0].status, .done)
         XCTAssertEqual(decoded.criticalTasks.map(\.title), state.criticalTasks.map(\.title))
         XCTAssertEqual(decoded.moneyAccounts.map(\.name), state.moneyAccounts.map(\.name))
+        XCTAssertEqual(decoded.moneyAccounts.map(\.color), state.moneyAccounts.map(\.color))
         XCTAssertEqual(decoded.moneyTransactions.map(\.title), state.moneyTransactions.map(\.title))
+        XCTAssertEqual(decoded.moneyTransactions.map(\.notes), state.moneyTransactions.map(\.notes))
+    }
+
+    func testMoneyAccountDecodesLegacyJSONWithDefaultColor() throws {
+        let legacyJSON = """
+        {
+          "metadata": {
+            "id": "00000000-0000-0000-0000-000000000778",
+            "createdAt": "2026-06-01T03:00:00Z",
+            "updatedAt": "2026-06-01T03:00:00Z"
+          },
+          "name": "Legacy cash",
+          "currency": "ARS",
+          "currentBalance": {
+            "minorUnits": 50000,
+            "currency": "ARS"
+          },
+          "kind": "Cash",
+          "status": "Active"
+        }
+        """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        let account = try decoder.decode(MoneyAccount.self, from: Data(legacyJSON.utf8))
+
+        XCTAssertEqual(account.name, "Legacy cash")
+        XCTAssertEqual(account.color, .money)
+    }
+
+    func testSeedMoneyAccountDecodesLegacyJSONWithStableDefaultColor() throws {
+        let legacyJSON = """
+        {
+          "metadata": {
+            "id": "00000000-0000-0000-0000-000000000201",
+            "createdAt": "2026-06-01T03:00:00Z",
+            "updatedAt": "2026-06-01T03:00:00Z"
+          },
+          "name": "Efectivo ARS",
+          "currency": "ARS",
+          "currentBalance": {
+            "minorUnits": 82400,
+            "currency": "ARS"
+          },
+          "kind": "Cash",
+          "status": "Active"
+        }
+        """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        let account = try decoder.decode(MoneyAccount.self, from: Data(legacyJSON.utf8))
+
+        XCTAssertEqual(account.name, "Efectivo ARS")
+        XCTAssertEqual(account.color, .warning)
     }
 
     func testWeightGoalDecodesLegacyJSONWithDefaultHealthConfig() throws {

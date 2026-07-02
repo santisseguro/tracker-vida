@@ -57,6 +57,14 @@ struct MoneyTotals {
         "\(usdtMinorUnits.formatted())"
     }
 
+    var arsEquivalentDisplay: String {
+        "$\(arsEquivalentMinorUnits.formatted()) ARS"
+    }
+
+    var usdtLabeledDisplay: String {
+        "\(usdtMinorUnits.formatted()) USDT"
+    }
+
     var dashboardDisplay: String {
         "$\(abbreviatedARSEquivalent)"
     }
@@ -322,6 +330,7 @@ final class AppStore: ObservableObject {
         currency: CurrencyCode,
         currentBalance: Int,
         status: MoneyAccountStatus = .active,
+        color: MoneyAccountColor = .money,
         createdAt: Date = .now
     ) -> MoneyAccount {
         let account = MoneyAccount(
@@ -330,7 +339,8 @@ final class AppStore: ObservableObject {
             currency: currency,
             currentBalance: MoneyAmount(minorUnits: currentBalance, currency: currency),
             kind: currency == .usdt ? .cryptoWallet : .digitalWallet,
-            status: status
+            status: status,
+            color: color
         )
 
         moneyAccounts.append(account)
@@ -357,7 +367,8 @@ final class AppStore: ObservableObject {
         amount: Int,
         toAccountID: EntityID,
         category: IncomeCategory,
-        date: Date = .now
+        date: Date = .now,
+        notes: String? = nil
     ) -> MoneyTransaction? {
         guard let accountIndex = moneyAccounts.firstIndex(where: { $0.id == toAccountID }) else { return nil }
         let account = moneyAccounts[accountIndex]
@@ -371,7 +382,8 @@ final class AppStore: ObservableObject {
             kind: .income,
             amount: transactionAmount,
             toAccountID: toAccountID,
-            category: .income(category)
+            category: .income(category),
+            notes: normalizedOptionalText(notes)
         )
 
         moneyTransactions.insert(transaction, at: 0)
@@ -385,7 +397,8 @@ final class AppStore: ObservableObject {
         amount: Int,
         fromAccountID: EntityID,
         category: ExpenseCategory,
-        date: Date = .now
+        date: Date = .now,
+        notes: String? = nil
     ) -> MoneyTransaction? {
         guard let accountIndex = moneyAccounts.firstIndex(where: { $0.id == fromAccountID }) else { return nil }
         let account = moneyAccounts[accountIndex]
@@ -399,7 +412,8 @@ final class AppStore: ObservableObject {
             kind: .expense,
             amount: transactionAmount,
             fromAccountID: fromAccountID,
-            category: .expense(category)
+            category: .expense(category),
+            notes: normalizedOptionalText(notes)
         )
 
         moneyTransactions.insert(transaction, at: 0)
@@ -413,7 +427,8 @@ final class AppStore: ObservableObject {
         amount: Int,
         fromAccountID: EntityID,
         toAccountID: EntityID,
-        date: Date = .now
+        date: Date = .now,
+        notes: String? = nil
     ) -> MoneyTransaction? {
         guard fromAccountID != toAccountID,
               let fromIndex = moneyAccounts.firstIndex(where: { $0.id == fromAccountID }),
@@ -435,7 +450,8 @@ final class AppStore: ObservableObject {
             kind: .transfer,
             amount: outgoingAmount,
             fromAccountID: fromAccountID,
-            toAccountID: toAccountID
+            toAccountID: toAccountID,
+            notes: normalizedOptionalText(notes)
         )
 
         moneyTransactions.insert(transaction, at: 0)
@@ -448,7 +464,8 @@ final class AppStore: ObservableObject {
         title: String,
         accountID: EntityID,
         newBalance: Int,
-        date: Date = .now
+        date: Date = .now,
+        notes: String? = nil
     ) -> MoneyTransaction? {
         guard let accountIndex = moneyAccounts.firstIndex(where: { $0.id == accountID }) else { return nil }
 
@@ -466,7 +483,8 @@ final class AppStore: ObservableObject {
             fromAccountID: difference < 0 ? accountID : nil,
             toAccountID: difference >= 0 ? accountID : nil,
             balanceBefore: previousBalance,
-            balanceAfter: updatedBalance
+            balanceAfter: updatedBalance,
+            notes: normalizedOptionalText(notes)
         )
 
         moneyTransactions.insert(transaction, at: 0)

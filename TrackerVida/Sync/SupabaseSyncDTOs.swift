@@ -184,6 +184,7 @@ struct SupabaseMoneyAccountDTO: Codable, Hashable, Identifiable {
     var currentBalanceMinorUnits: Int
     var kind: String
     var status: String
+    var color: String
     var notes: String?
     var createdAt: Date
     var updatedAt: Date
@@ -197,6 +198,7 @@ struct SupabaseMoneyAccountDTO: Codable, Hashable, Identifiable {
         case currentBalanceMinorUnits = "current_balance_minor_units"
         case kind
         case status
+        case color
         case notes
         case createdAt = "created_at"
         case updatedAt = "updated_at"

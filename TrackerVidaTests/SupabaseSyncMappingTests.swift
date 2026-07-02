@@ -68,6 +68,7 @@ final class SupabaseSyncMappingTests: XCTestCase {
         XCTAssertEqual(snapshot.moneyAccounts.map(\.id), state.moneyAccounts.map(\.id))
         XCTAssertEqual(snapshot.moneyAccounts.first?.currency, state.moneyAccounts.first?.currency.rawValue)
         XCTAssertEqual(snapshot.moneyAccounts.first?.currentBalanceMinorUnits, state.moneyAccounts.first?.currentBalance.minorUnits)
+        XCTAssertEqual(snapshot.moneyAccounts.first?.color, state.moneyAccounts.first?.color.rawValue)
         XCTAssertEqual(snapshot.moneyAccounts.first?.updatedAt, state.moneyAccounts.first?.metadata.updatedAt)
 
         let incomeDTO = snapshot.moneyTransactions.first { $0.kind == MoneyTransactionKind.income.rawValue }
@@ -77,6 +78,7 @@ final class SupabaseSyncMappingTests: XCTestCase {
 
         XCTAssertEqual(incomeDTO?.categoryKind, "income")
         XCTAssertEqual(incomeDTO?.categoryLabel, IncomeCategory.trabajo.rawValue)
+        XCTAssertEqual(incomeDTO?.notes, state.moneyTransactions.first { $0.id == incomeDTO?.id }?.notes)
         XCTAssertEqual(expenseDTO?.categoryKind, "expense")
         XCTAssertEqual(expenseDTO?.categoryLabel, ExpenseCategory.comida.rawValue)
         XCTAssertNil(transferDTO?.categoryKind)
@@ -85,6 +87,7 @@ final class SupabaseSyncMappingTests: XCTestCase {
         XCTAssertNotNil(adjustmentDTO?.balanceAfterMinorUnits)
 
         XCTAssertEqual(Set(restoredState.moneyAccounts.map(\.id)), Set(state.moneyAccounts.map(\.id)))
+        XCTAssertEqual(Set(restoredState.moneyAccounts.map(\.color)), Set(state.moneyAccounts.map(\.color)))
         XCTAssertEqual(Set(restoredState.moneyTransactions.map(\.id)), Set(state.moneyTransactions.map(\.id)))
 
         let restoredIncome = restoredState.moneyTransactions.first { $0.id == incomeDTO?.id }
@@ -92,9 +95,12 @@ final class SupabaseSyncMappingTests: XCTestCase {
         let restoredAdjustment = restoredState.moneyTransactions.first { $0.id == adjustmentDTO?.id }
 
         XCTAssertEqual(restoredIncome?.category?.label, IncomeCategory.trabajo.rawValue)
+        XCTAssertEqual(restoredIncome?.notes, incomeDTO?.notes)
         XCTAssertEqual(restoredExpense?.category?.label, ExpenseCategory.comida.rawValue)
+        XCTAssertEqual(restoredExpense?.notes, expenseDTO?.notes)
         XCTAssertEqual(restoredAdjustment?.balanceBefore?.minorUnits, adjustmentDTO?.balanceBeforeMinorUnits)
         XCTAssertEqual(restoredAdjustment?.balanceAfter?.minorUnits, adjustmentDTO?.balanceAfterMinorUnits)
+        XCTAssertEqual(restoredAdjustment?.notes, adjustmentDTO?.notes)
     }
 
     func testMapsDailyAIOrderChecklistStateToDTOsAndBack() {
@@ -157,11 +163,15 @@ final class SupabaseSyncMappingTests: XCTestCase {
         XCTAssertEqual(restoredState.dailyHealthLogs.map(\.date), state.dailyHealthLogs.map(\.date))
         XCTAssertEqual(restoredState.criticalTasks.map(\.status), state.criticalTasks.map(\.status))
         XCTAssertEqual(Set(restoredState.moneyAccounts.map(\.currentBalance.minorUnits)), Set(state.moneyAccounts.map(\.currentBalance.minorUnits)))
+        XCTAssertEqual(Set(restoredState.moneyAccounts.map(\.color)), Set(state.moneyAccounts.map(\.color)))
         XCTAssertEqual(Set(restoredState.moneyTransactions.map(\.amount.minorUnits)), Set(state.moneyTransactions.map(\.amount.minorUnits)))
 
         let originalCategories = state.moneyTransactions.compactMap { $0.category?.label }.sorted()
         let restoredCategories = restoredState.moneyTransactions.compactMap { $0.category?.label }.sorted()
         XCTAssertEqual(restoredCategories, originalCategories)
+        let originalNotesByID = Dictionary(uniqueKeysWithValues: state.moneyTransactions.map { ($0.id, $0.notes) })
+        let restoredNotesByID = Dictionary(uniqueKeysWithValues: restoredState.moneyTransactions.map { ($0.id, $0.notes) })
+        XCTAssertEqual(restoredNotesByID, originalNotesByID)
 
         let originalChecklistStatuses = state.dailyOrderPlan.orders.flatMap(\.checklist).map(\.status)
         let restoredChecklistStatuses = restoredState.dailyOrderPlan.orders.flatMap(\.checklist).map(\.status)
