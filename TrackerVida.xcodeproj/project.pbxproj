@@ -33,6 +33,9 @@
 		A00000000000000000000118 /* AppStatePersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000021A /* AppStatePersistence.swift */; };
 		A00000000000000000000119 /* GymHealthEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000021B /* GymHealthEngine.swift */; };
 		A0000000000000000000011A /* GymHealthDailyOrderGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000021C /* GymHealthDailyOrderGenerator.swift */; };
+		A0000000000000000000011B /* SupabaseSyncDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000021D /* SupabaseSyncDTOs.swift */; };
+		A0000000000000000000011C /* SupabaseSyncMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000021E /* SupabaseSyncMapper.swift */; };
+		A0000000000000000000011D /* SupabaseSyncMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000021F /* SupabaseSyncMappingTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -74,6 +77,9 @@
 		A0000000000000000000021A /* AppStatePersistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStatePersistence.swift; sourceTree = "<group>"; };
 		A0000000000000000000021B /* GymHealthEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymHealthEngine.swift; sourceTree = "<group>"; };
 		A0000000000000000000021C /* GymHealthDailyOrderGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymHealthDailyOrderGenerator.swift; sourceTree = "<group>"; };
+		A0000000000000000000021D /* SupabaseSyncDTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseSyncDTOs.swift; sourceTree = "<group>"; };
+		A0000000000000000000021E /* SupabaseSyncMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseSyncMapper.swift; sourceTree = "<group>"; };
+		A0000000000000000000021F /* SupabaseSyncMappingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseSyncMappingTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -98,6 +104,7 @@
 				A00000000000000000000604 /* Domain */,
 				A00000000000000000000605 /* Mock */,
 				A00000000000000000000616 /* State */,
+				A00000000000000000000617 /* Sync */,
 				A00000000000000000000606 /* Shared */,
 				A00000000000000000000607 /* Features */,
 				A00000000000000000000215 /* Assets.xcassets */,
@@ -109,6 +116,7 @@
 		A00000000000000000000604 /* Domain */ = {isa = PBXGroup; children = (A00000000000000000000203, A00000000000000000000204, A0000000000000000000021B, A0000000000000000000021C, A00000000000000000000205, A00000000000000000000206, A00000000000000000000207, A00000000000000000000208); path = Domain; sourceTree = "<group>"; };
 		A00000000000000000000605 /* Mock */ = {isa = PBXGroup; children = (A00000000000000000000209); path = Mock; sourceTree = "<group>"; };
 		A00000000000000000000616 /* State */ = {isa = PBXGroup; children = (A00000000000000000000219, A0000000000000000000021A); path = State; sourceTree = "<group>"; };
+		A00000000000000000000617 /* Sync */ = {isa = PBXGroup; children = (A0000000000000000000021D, A0000000000000000000021E); path = Sync; sourceTree = "<group>"; };
 		A00000000000000000000606 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
@@ -137,7 +145,7 @@
 		A00000000000000000000613 /* University */ = {isa = PBXGroup; children = (A00000000000000000000212); path = University; sourceTree = "<group>"; };
 		A00000000000000000000614 /* Money */ = {isa = PBXGroup; children = (A00000000000000000000213); path = Money; sourceTree = "<group>"; };
 		A00000000000000000000615 /* Settings */ = {isa = PBXGroup; children = (A00000000000000000000214); path = Settings; sourceTree = "<group>"; };
-		A00000000000000000000610 /* TrackerVidaTests */ = {isa = PBXGroup; children = (A00000000000000000000216); path = TrackerVidaTests; sourceTree = "<group>"; };
+		A00000000000000000000610 /* TrackerVidaTests */ = {isa = PBXGroup; children = (A00000000000000000000216, A0000000000000000000021F); path = TrackerVidaTests; sourceTree = "<group>"; };
 		A00000000000000000000620 /* Products */ = {isa = PBXGroup; children = (A00000000000000000000217, A00000000000000000000218); name = Products; sourceTree = "<group>"; };
 /* End PBXGroup section */
 
@@ -207,10 +215,11 @@
 				A0000000000000000000010D, A0000000000000000000010E, A0000000000000000000010F, A00000000000000000000110,
 				A00000000000000000000111, A00000000000000000000112, A00000000000000000000113, A00000000000000000000114,
 				A00000000000000000000117, A00000000000000000000118, A00000000000000000000119, A0000000000000000000011A,
+				A0000000000000000000011B, A0000000000000000000011C,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A00000000000000000000512 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000116); runOnlyForDeploymentPostprocessing = 0; };
+		A00000000000000000000512 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000116, A0000000000000000000011D); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
