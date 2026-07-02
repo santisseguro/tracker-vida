@@ -88,6 +88,22 @@ enum MockData {
         SimpleListItem(title: "Economia reading checkpoint", detail: "Wed", value: "Read")
     ]
 
+    static let algebraClassID = UUID(uuidString: "00000000-0000-0000-0000-000000000301")!
+    static let programmingClassID = UUID(uuidString: "00000000-0000-0000-0000-000000000302")!
+    static let economicsClassID = UUID(uuidString: "00000000-0000-0000-0000-000000000303")!
+
+    static let universityClasses = [
+        UniversityClass(metadata: BaseMetadata(id: algebraClassID), name: "Algebra", shortName: "ALG", instructor: "Prof. Molina", location: "Aula 204", color: .university, status: .active, notes: "Practice-heavy class."),
+        UniversityClass(metadata: BaseMetadata(id: programmingClassID), name: "Programacion", shortName: "PROG", instructor: "Ing. Perez", location: "Lab 3", color: .primary, status: .active, notes: nil),
+        UniversityClass(metadata: BaseMetadata(id: economicsClassID), name: "Economia", shortName: "ECO", instructor: nil, location: "Aula 112", color: .warning, status: .active, notes: nil)
+    ]
+
+    static let universityScheduleSessions = [
+        UniversityScheduleSession(metadata: BaseMetadata(), classID: algebraClassID, weekday: .sunday, startMinuteOfDay: 9 * 60, endMinuteOfDay: 10 * 60 + 30),
+        UniversityScheduleSession(metadata: BaseMetadata(), classID: programmingClassID, weekday: .monday, startMinuteOfDay: 14 * 60, endMinuteOfDay: 16 * 60, locationOverride: "Lab 2"),
+        UniversityScheduleSession(metadata: BaseMetadata(), classID: economicsClassID, weekday: .wednesday, startMinuteOfDay: 11 * 60, endMinuteOfDay: 12 * 60 + 30)
+    ]
+
     static let accountARS = UUID(uuidString: "00000000-0000-0000-0000-000000000201")!
     static let accountBankARS = UUID(uuidString: "00000000-0000-0000-0000-000000000202")!
     static let accountUSDT = UUID(uuidString: "00000000-0000-0000-0000-000000000203")!

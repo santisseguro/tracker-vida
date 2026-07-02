@@ -2,7 +2,7 @@ import SwiftUI
 
 struct UniversityView: View {
     @EnvironmentObject private var store: AppStore
-    @State private var activeSheet: UniversityTaskSheet?
+    @State private var activeSheet: UniversitySheet?
 
     private var state: UniversityViewState { store.universityState }
 
@@ -35,7 +35,40 @@ struct UniversityView: View {
             }
             .contentShape(Rectangle())
             .onTapGesture {
-                activeSheet = .add
+                activeSheet = .addTask
+            }
+
+            AppCard(tint: AppTheme.Colors.primary, compact: true) {
+                HStack {
+                    Text("Class schedule")
+                        .font(.headline.weight(.bold))
+                    Spacer()
+                    Button {
+                        activeSheet = .addClass
+                    } label: {
+                        Label("Add class", systemImage: "plus.circle.fill")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(AppTheme.Colors.primary)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                if !state.todayClasses.isEmpty {
+                    ForEach(state.todayClasses) { scheduledClass in
+                        ScheduledClassRow(scheduledClass: scheduledClass, tint: tint(for: scheduledClass.universityClass))
+                    }
+                } else if let nextClass = state.upcomingClassesThisWeek.first {
+                    Text("Next up")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.secondary)
+                    ScheduledClassRow(scheduledClass: nextClass, tint: tint(for: nextClass.universityClass), showsWeekday: true)
+                } else {
+                    Text("No classes scheduled yet.")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+
+                WeeklySchedulePreview(classes: state.classes, scheduledClasses: state.upcomingClassesThisWeek)
             }
 
             AppCard {
@@ -46,7 +79,7 @@ struct UniversityView: View {
                     InfoRow(title: task.title, detail: task.category.rawValue, value: task.priority.rawValue, symbol: "exclamationmark.circle.fill", tint: AppTheme.Colors.university)
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            activeSheet = .edit(task.id)
+                            activeSheet = .editTask(task.id)
                         }
                         .contextMenu {
                             Button("Mark completed") {
@@ -61,7 +94,7 @@ struct UniversityView: View {
                     InfoRow(title: task.title, detail: task.category.rawValue, value: task.dueDate?.formatted(date: .abbreviated, time: .omitted), symbol: "calendar", tint: AppTheme.Colors.primary)
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            activeSheet = .edit(task.id)
+                            activeSheet = .editTask(task.id)
                         }
                         .contextMenu {
                             Button("Mark completed") {
@@ -93,23 +126,117 @@ struct UniversityView: View {
             }
         }
         .sheet(item: $activeSheet) { sheet in
-            UniversityTaskFormView(sheet: sheet)
-                .environmentObject(store)
+            switch sheet {
+            case .addTask, .editTask:
+                UniversityTaskFormView(sheet: sheet)
+                    .environmentObject(store)
+            case .addClass:
+                UniversityClassFormView()
+                    .environmentObject(store)
+            }
+        }
+    }
+
+    private func tint(for universityClass: UniversityClass) -> Color {
+        universityClass.color?.tint ?? AppTheme.Colors.university
+    }
+}
+
+private enum UniversitySheet: Identifiable {
+    case addTask
+    case editTask(EntityID)
+    case addClass
+
+    var id: String {
+        switch self {
+        case .addTask:
+            return "add-task"
+        case let .editTask(taskID):
+            return "edit-task-\(taskID.uuidString)"
+        case .addClass:
+            return "add-class"
         }
     }
 }
 
-private enum UniversityTaskSheet: Identifiable {
-    case add
-    case edit(EntityID)
+private struct ScheduledClassRow: View {
+    var scheduledClass: UniversityScheduledClass
+    var tint: Color
+    var showsWeekday = false
 
-    var id: String {
-        switch self {
-        case .add:
-            return "add"
-        case let .edit(taskID):
-            return taskID.uuidString
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "book.closed.fill")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(tint)
+                .frame(width: 28, height: 28)
+                .background(tint.opacity(0.12), in: Circle())
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(scheduledClass.universityClass.name)
+                    .font(.subheadline.weight(.semibold))
+
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+            }
+
+            Spacer(minLength: 12)
+
+            Text(timeRangeText(for: scheduledClass.session))
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.secondary)
         }
+        .padding(.vertical, 4)
+    }
+
+    private var detail: String {
+        let prefix = showsWeekday ? "\(scheduledClass.session.weekday.shortName) · " : ""
+
+        if let location = scheduledClass.location {
+            return "\(prefix)\(location)"
+        }
+
+        if let instructor = scheduledClass.universityClass.instructor {
+            return "\(prefix)\(instructor)"
+        }
+
+        return "\(prefix)Weekly"
+    }
+}
+
+private struct WeeklySchedulePreview: View {
+    var classes: [UniversityClass]
+    var scheduledClasses: [UniversityScheduledClass]
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(UniversityWeekday.allCases) { weekday in
+                let count = scheduledClasses.filter { $0.session.weekday == weekday }.count
+                VStack(spacing: 6) {
+                    Text(weekday.shortName.prefix(1))
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.secondary)
+
+                    Circle()
+                        .fill(count > 0 ? tint(for: weekday) : Color.secondary.opacity(0.18))
+                        .frame(width: 7, height: 7)
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+        .padding(.top, 4)
+        .accessibilityLabel("Weekly class schedule preview")
+    }
+
+    private func tint(for weekday: UniversityWeekday) -> Color {
+        guard let scheduledClass = scheduledClasses.first(where: { $0.session.weekday == weekday }) else {
+            return .secondary.opacity(0.18)
+        }
+
+        return scheduledClass.universityClass.color?.tint ?? AppTheme.Colors.university
     }
 }
 
@@ -135,14 +262,132 @@ private struct UniversityTaskDraft {
     }
 }
 
+private struct UniversityClassDraft {
+    var name = ""
+    var instructor = ""
+    var location = ""
+    var weekday: UniversityWeekday = .monday
+    var startTime: Date
+    var endTime: Date
+    var notes = ""
+
+    init(currentDate: Date) {
+        startTime = Self.date(on: currentDate, hour: 9, minute: 0)
+        endTime = Self.date(on: currentDate, hour: 10, minute: 30)
+    }
+
+    private static func date(on date: Date, hour: Int, minute: Int) -> Date {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
+        return calendar.date(
+            from: DateComponents(
+                year: components.year,
+                month: components.month,
+                day: components.day,
+                hour: hour,
+                minute: minute
+            )
+        ) ?? date
+    }
+}
+
+private struct UniversityClassFormView: View {
+    @EnvironmentObject private var store: AppStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var draft: UniversityClassDraft
+
+    init() {
+        _draft = State(initialValue: UniversityClassDraft(currentDate: .now))
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Class") {
+                    TextField("Class name", text: $draft.name)
+                    TextField("Instructor optional", text: $draft.instructor)
+                    TextField("Location optional", text: $draft.location)
+                }
+
+                Section("Schedule") {
+                    Picker("Weekday", selection: $draft.weekday) {
+                        ForEach(UniversityWeekday.allCases) { weekday in
+                            Text(weekday.fullName).tag(weekday)
+                        }
+                    }
+
+                    DatePicker("Starts", selection: $draft.startTime, displayedComponents: .hourAndMinute)
+                    DatePicker("Ends", selection: $draft.endTime, displayedComponents: .hourAndMinute)
+                }
+
+                Section("Note") {
+                    TextField("Optional note", text: $draft.notes, axis: .vertical)
+                        .lineLimit(2...4)
+                }
+            }
+            .navigationTitle("New class")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        save()
+                        dismiss()
+                    }
+                    .disabled(!canSave)
+                }
+            }
+            .onAppear {
+                draft = UniversityClassDraft(currentDate: store.currentDate)
+            }
+        }
+    }
+
+    private var canSave: Bool {
+        !draft.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && endMinute > startMinute
+    }
+
+    private var startMinute: Int {
+        minuteOfDay(from: draft.startTime)
+    }
+
+    private var endMinute: Int {
+        minuteOfDay(from: draft.endTime)
+    }
+
+    private func save() {
+        let universityClass = store.addUniversityClass(
+            name: draft.name,
+            instructor: draft.instructor,
+            location: draft.location,
+            color: .university,
+            notes: draft.notes,
+            createdAt: store.currentDate
+        )
+
+        store.addUniversityScheduleSession(
+            classID: universityClass.id,
+            weekday: draft.weekday,
+            startMinuteOfDay: startMinute,
+            endMinuteOfDay: endMinute,
+            createdAt: store.currentDate
+        )
+    }
+}
+
 private struct UniversityTaskFormView: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
     @State private var draft: UniversityTaskDraft
 
-    private let sheet: UniversityTaskSheet
+    private let sheet: UniversitySheet
 
-    init(sheet: UniversityTaskSheet) {
+    init(sheet: UniversitySheet) {
         self.sheet = sheet
         _draft = State(initialValue: UniversityTaskDraft(task: nil, currentDate: .now))
     }
@@ -216,19 +461,23 @@ private struct UniversityTaskFormView: View {
 
     private var navigationTitle: String {
         switch sheet {
-        case .add:
+        case .addTask:
             return "New task"
-        case .edit:
+        case .editTask:
             return "Edit task"
+        case .addClass:
+            return "Task"
         }
     }
 
     private func loadDraft() {
         switch sheet {
-        case .add:
+        case .addTask:
             draft = UniversityTaskDraft(task: nil, currentDate: store.currentDate)
-        case let .edit(taskID):
+        case let .editTask(taskID):
             draft = UniversityTaskDraft(task: store.universityTask(id: taskID), currentDate: store.currentDate)
+        case .addClass:
+            draft = UniversityTaskDraft(task: nil, currentDate: store.currentDate)
         }
     }
 
@@ -238,7 +487,7 @@ private struct UniversityTaskFormView: View {
         let waitingSince = draft.status == .waitingResponse ? draft.waitingSince : nil
 
         switch sheet {
-        case .add:
+        case .addTask:
             store.addUniversityTask(
                 title: title,
                 category: draft.category,
@@ -248,7 +497,7 @@ private struct UniversityTaskFormView: View {
                 notes: draft.notes,
                 waitingSince: waitingSince
             )
-        case let .edit(taskID):
+        case let .editTask(taskID):
             guard var task = store.universityTask(id: taskID) else { return }
 
             task.title = title
@@ -260,6 +509,41 @@ private struct UniversityTaskFormView: View {
             task.waitingSince = waitingSince
 
             store.updateUniversityTask(task)
+        case .addClass:
+            break
+        }
+    }
+}
+
+private func timeRangeText(for session: UniversityScheduleSession) -> String {
+    "\(timeText(for: session.startMinuteOfDay))-\(timeText(for: session.endMinuteOfDay))"
+}
+
+private func timeText(for minuteOfDay: Int) -> String {
+    let hour = minuteOfDay / 60
+    let minute = minuteOfDay % 60
+    return String(format: "%02d:%02d", hour, minute)
+}
+
+private func minuteOfDay(from date: Date) -> Int {
+    let calendar = Calendar.current
+    let components = calendar.dateComponents([.hour, .minute], from: date)
+    return ((components.hour ?? 0) * 60) + (components.minute ?? 0)
+}
+
+private extension UniversityClassColor {
+    var tint: Color {
+        switch self {
+        case .university:
+            return AppTheme.Colors.university
+        case .primary:
+            return AppTheme.Colors.primary
+        case .health:
+            return AppTheme.Colors.health
+        case .warning:
+            return AppTheme.Colors.warning
+        case .ai:
+            return AppTheme.Colors.ai
         }
     }
 }

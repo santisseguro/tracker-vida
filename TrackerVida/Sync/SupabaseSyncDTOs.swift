@@ -176,6 +176,62 @@ struct SupabaseUniversityTaskDTO: Codable, Hashable, Identifiable {
     }
 }
 
+struct SupabaseUniversityClassDTO: Codable, Hashable, Identifiable {
+    var id: EntityID
+    var ownerID: EntityID
+    var name: String
+    var shortName: String?
+    var instructor: String?
+    var location: String?
+    var color: String?
+    var status: String
+    var notes: String?
+    var createdAt: Date
+    var updatedAt: Date
+    var archivedAt: Date?
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case ownerID = "owner_id"
+        case name
+        case shortName = "short_name"
+        case instructor
+        case location
+        case color
+        case status
+        case notes
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case archivedAt = "archived_at"
+    }
+}
+
+struct SupabaseUniversityScheduleSessionDTO: Codable, Hashable, Identifiable {
+    var id: EntityID
+    var ownerID: EntityID
+    var classID: EntityID
+    var weekday: Int
+    var startMinuteOfDay: Int
+    var endMinuteOfDay: Int
+    var locationOverride: String?
+    var createdAt: Date
+    var updatedAt: Date
+    var archivedAt: Date?
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case ownerID = "owner_id"
+        case classID = "class_id"
+        case weekday
+        case startMinuteOfDay = "start_minute_of_day"
+        case endMinuteOfDay = "end_minute_of_day"
+        case locationOverride = "location_override"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case archivedAt = "archived_at"
+    }
+}
+
 struct SupabaseMoneyAccountDTO: Codable, Hashable, Identifiable {
     var id: EntityID
     var ownerID: EntityID
@@ -342,6 +398,8 @@ struct SupabaseAppStateDTO: Codable, Hashable {
     var weightLogs: [SupabaseHealthWeightLogDTO]
     var dailyHealthLogs: [SupabaseHealthDailyLogDTO]
     var universityTasks: [SupabaseUniversityTaskDTO]
+    var universityClasses: [SupabaseUniversityClassDTO]
+    var universityScheduleSessions: [SupabaseUniversityScheduleSessionDTO]
     var moneyAccounts: [SupabaseMoneyAccountDTO]
     var moneyTransactions: [SupabaseMoneyTransactionDTO]
     var dailyOrderPlan: SupabaseDailyOrderPlanDTO

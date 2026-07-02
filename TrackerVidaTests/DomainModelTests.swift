@@ -558,6 +558,8 @@ final class DomainModelTests: XCTestCase {
             upcomingDeadlines: MockData.upcomingDeadlines,
             waitingResponses: MockData.waitingResponses,
             timeline: MockData.timeline,
+            universityClasses: MockData.universityClasses,
+            universityScheduleSessions: MockData.universityScheduleSessions,
             moneyAccounts: MockData.moneyAccounts,
             moneyTransactions: MockData.moneyTransactions
         )
@@ -576,6 +578,9 @@ final class DomainModelTests: XCTestCase {
         XCTAssertEqual(decoded.dailyHealthLogs.count, state.dailyHealthLogs.count)
         XCTAssertEqual(decoded.dailyOrderPlan.orders[0].checklist[0].status, .done)
         XCTAssertEqual(decoded.criticalTasks.map(\.title), state.criticalTasks.map(\.title))
+        XCTAssertEqual(decoded.universityClasses.map(\.id), state.universityClasses.map(\.id))
+        XCTAssertEqual(decoded.universityScheduleSessions.map(\.id), state.universityScheduleSessions.map(\.id))
+        XCTAssertEqual(decoded.universityScheduleSessions.map(\.weekday), state.universityScheduleSessions.map(\.weekday))
         XCTAssertEqual(decoded.moneyAccounts.map(\.name), state.moneyAccounts.map(\.name))
         XCTAssertEqual(decoded.moneyAccounts.map(\.color), state.moneyAccounts.map(\.color))
         XCTAssertEqual(decoded.moneyTransactions.map(\.title), state.moneyTransactions.map(\.title))
@@ -1151,6 +1156,107 @@ final class DomainModelTests: XCTestCase {
         XCTAssertEqual(store.universityTask(id: taskID)?.status, .waitingResponse)
         XCTAssertEqual(store.universityTask(id: taskID)?.waitingSince, waitingSince)
         XCTAssertEqual(store.universityState.waitingResponses.first?.title, "Lectura Economia")
+    }
+
+    @MainActor
+    func testStoreAddsUniversityClass() {
+        let store = AppStore(currentDate: MockData.today)
+
+        let universityClass = store.addUniversityClass(
+            name: "  Analisis Matematico  ",
+            shortName: "  ANA  ",
+            instructor: "  Prof. Ruiz  ",
+            location: "  Aula 7  ",
+            color: .primary,
+            notes: "  Integrales  ",
+            createdAt: MockData.today
+        )
+
+        let storedClass = store.universityClass(id: universityClass.id)
+        XCTAssertEqual(storedClass?.name, "Analisis Matematico")
+        XCTAssertEqual(storedClass?.shortName, "ANA")
+        XCTAssertEqual(storedClass?.instructor, "Prof. Ruiz")
+        XCTAssertEqual(storedClass?.location, "Aula 7")
+        XCTAssertEqual(storedClass?.color, .primary)
+        XCTAssertEqual(storedClass?.notes, "Integrales")
+        XCTAssertEqual(store.universityState.classes.count, MockData.universityClasses.count + 1)
+    }
+
+    @MainActor
+    func testStoreAddsUniversityScheduleSession() throws {
+        let store = AppStore(currentDate: MockData.today)
+        let universityClass = store.addUniversityClass(name: "Fisica", shortName: "FIS", createdAt: MockData.today)
+
+        let session = try XCTUnwrap(
+            store.addUniversityScheduleSession(
+                classID: universityClass.id,
+                weekday: .monday,
+                startMinuteOfDay: 9 * 60,
+                endMinuteOfDay: 10 * 60 + 30,
+                locationOverride: "  Lab 4  ",
+                createdAt: MockData.today
+            )
+        )
+
+        XCTAssertEqual(session.classID, universityClass.id)
+        XCTAssertEqual(session.weekday, .monday)
+        XCTAssertEqual(session.locationOverride, "Lab 4")
+        XCTAssertTrue(store.upcomingClassesThisWeek(from: MockData.today).contains { $0.session.id == session.id })
+    }
+
+    @MainActor
+    func testStoreComputesTodaysClasses() {
+        let store = AppStore(currentDate: MockData.today)
+
+        let todaysClasses = store.todayClasses(on: MockData.today)
+
+        XCTAssertTrue(todaysClasses.contains { $0.universityClass.id == MockData.algebraClassID })
+        XCTAssertTrue(todaysClasses.allSatisfy { $0.session.weekday == .sunday })
+    }
+
+    @MainActor
+    func testStoreComputesUpcomingClassesThisWeek() {
+        let store = AppStore(currentDate: MockData.today)
+
+        let upcomingClasses = store.upcomingClassesThisWeek(from: MockData.today)
+        let upcomingIDs = Set(upcomingClasses.map(\.universityClass.id))
+
+        XCTAssertTrue(upcomingIDs.isSuperset(of: [MockData.algebraClassID, MockData.programmingClassID, MockData.economicsClassID]))
+        XCTAssertEqual(upcomingClasses.first?.universityClass.id, MockData.algebraClassID)
+        XCTAssertTrue(upcomingClasses.allSatisfy { scheduledClass in
+            let days = MockData.calendar.dateComponents(
+                [.day],
+                from: MockData.calendar.startOfDay(for: MockData.today),
+                to: MockData.calendar.startOfDay(for: scheduledClass.occurrenceDate)
+            ).day ?? -1
+
+            return days >= 0 && days < 7
+        })
+    }
+
+    @MainActor
+    func testUniversitySchedulePersistsAndRestores() throws {
+        let persistence = InMemoryAppStatePersistence(state: nil)
+        let store = AppStore(currentDate: MockData.today, persistence: persistence)
+        let universityClass = store.addUniversityClass(name: "Historia", shortName: "HIS", location: "Aula 12", createdAt: MockData.today)
+        let session = try XCTUnwrap(
+            store.addUniversityScheduleSession(
+                classID: universityClass.id,
+                weekday: .tuesday,
+                startMinuteOfDay: 16 * 60,
+                endMinuteOfDay: 18 * 60,
+                createdAt: MockData.today
+            )
+        )
+
+        let restoredStore = AppStore(
+            currentDate: MockData.today,
+            persistence: InMemoryAppStatePersistence(state: persistence.savedStates.last)
+        )
+
+        XCTAssertEqual(restoredStore.universityClass(id: universityClass.id)?.name, "Historia")
+        XCTAssertTrue(restoredStore.universityScheduleSessions.contains { $0.id == session.id })
+        XCTAssertTrue(restoredStore.upcomingClassesThisWeek(from: MockData.today).contains { $0.session.id == session.id })
     }
 
     @MainActor

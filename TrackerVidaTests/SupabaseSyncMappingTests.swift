@@ -47,6 +47,13 @@ final class SupabaseSyncMappingTests: XCTestCase {
         XCTAssertTrue(snapshot.universityTasks.contains { $0.priority == AcademicTaskPriority.critical.rawValue })
         XCTAssertTrue(snapshot.universityTasks.contains { $0.status == AcademicTaskStatus.waitingResponse.rawValue })
         XCTAssertTrue(snapshot.universityTasks.contains { $0.waitingSince != nil })
+        XCTAssertEqual(snapshot.universityClasses.map(\.id), state.universityClasses.map(\.id))
+        XCTAssertEqual(snapshot.universityClasses.first?.ownerID, ownerID)
+        XCTAssertEqual(snapshot.universityClasses.first?.name, state.universityClasses.first?.name)
+        XCTAssertEqual(snapshot.universityScheduleSessions.map(\.id), state.universityScheduleSessions.map(\.id))
+        XCTAssertEqual(snapshot.universityScheduleSessions.first?.ownerID, ownerID)
+        XCTAssertEqual(snapshot.universityScheduleSessions.first?.classID, state.universityScheduleSessions.first?.classID)
+        XCTAssertEqual(snapshot.universityScheduleSessions.first?.weekday, state.universityScheduleSessions.first?.weekday.rawValue)
 
         let originalTasks = state.criticalTasks + state.upcomingDeadlines
         let restoredTasks = restoredState.criticalTasks + restoredState.upcomingDeadlines
@@ -58,6 +65,10 @@ final class SupabaseSyncMappingTests: XCTestCase {
         let waitingTask = restoredTasks.first { $0.status == .waitingResponse }
         XCTAssertEqual(waitingTask?.waitingSince, originalTasks.first { $0.status == .waitingResponse }?.waitingSince)
         XCTAssertEqual(waitingTask?.notes, originalTasks.first { $0.status == .waitingResponse }?.notes)
+        XCTAssertEqual(Set(restoredState.universityClasses.map(\.id)), Set(state.universityClasses.map(\.id)))
+        XCTAssertEqual(Set(restoredState.universityClasses.map(\.color)), Set(state.universityClasses.map(\.color)))
+        XCTAssertEqual(Set(restoredState.universityScheduleSessions.map(\.id)), Set(state.universityScheduleSessions.map(\.id)))
+        XCTAssertEqual(Set(restoredState.universityScheduleSessions.map(\.weekday)), Set(state.universityScheduleSessions.map(\.weekday)))
     }
 
     func testMapsMoneyAccountsAndTransactionsToDTOsAndBack() {
@@ -162,6 +173,8 @@ final class SupabaseSyncMappingTests: XCTestCase {
         XCTAssertEqual(restoredState.weightLogs.map(\.id), state.weightLogs.map(\.id))
         XCTAssertEqual(restoredState.dailyHealthLogs.map(\.date), state.dailyHealthLogs.map(\.date))
         XCTAssertEqual(restoredState.criticalTasks.map(\.status), state.criticalTasks.map(\.status))
+        XCTAssertEqual(Set(restoredState.universityClasses.map(\.id)), Set(state.universityClasses.map(\.id)))
+        XCTAssertEqual(Set(restoredState.universityScheduleSessions.map(\.id)), Set(state.universityScheduleSessions.map(\.id)))
         XCTAssertEqual(Set(restoredState.moneyAccounts.map(\.currentBalance.minorUnits)), Set(state.moneyAccounts.map(\.currentBalance.minorUnits)))
         XCTAssertEqual(Set(restoredState.moneyAccounts.map(\.color)), Set(state.moneyAccounts.map(\.color)))
         XCTAssertEqual(Set(restoredState.moneyTransactions.map(\.amount.minorUnits)), Set(state.moneyTransactions.map(\.amount.minorUnits)))
@@ -223,6 +236,8 @@ final class SupabaseSyncMappingTests: XCTestCase {
             upcomingDeadlines: [waitingTask] + Array(MockData.upcomingDeadlines.dropFirst()),
             waitingResponses: MockData.waitingResponses,
             timeline: MockData.timeline,
+            universityClasses: MockData.universityClasses,
+            universityScheduleSessions: MockData.universityScheduleSessions,
             moneyAccounts: MockData.moneyAccounts,
             moneyTransactions: MockData.moneyTransactions + [adjustment]
         )

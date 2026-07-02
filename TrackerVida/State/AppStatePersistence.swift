@@ -10,6 +10,8 @@ struct PersistedAppState: Codable, Hashable {
     var upcomingDeadlines: [AcademicTask]
     var waitingResponses: [SimpleListItem]
     var timeline: [SimpleListItem]
+    var universityClasses: [UniversityClass]
+    var universityScheduleSessions: [UniversityScheduleSession]
     var moneyAccounts: [MoneyAccount]
     var moneyTransactions: [MoneyTransaction]
 
@@ -23,6 +25,8 @@ struct PersistedAppState: Codable, Hashable {
         upcomingDeadlines: [AcademicTask],
         waitingResponses: [SimpleListItem],
         timeline: [SimpleListItem],
+        universityClasses: [UniversityClass] = [],
+        universityScheduleSessions: [UniversityScheduleSession] = [],
         moneyAccounts: [MoneyAccount],
         moneyTransactions: [MoneyTransaction]
     ) {
@@ -35,8 +39,43 @@ struct PersistedAppState: Codable, Hashable {
         self.upcomingDeadlines = upcomingDeadlines
         self.waitingResponses = waitingResponses
         self.timeline = timeline
+        self.universityClasses = universityClasses
+        self.universityScheduleSessions = universityScheduleSessions
         self.moneyAccounts = moneyAccounts
         self.moneyTransactions = moneyTransactions
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case schemaVersion
+        case weightGoal
+        case weightLogs
+        case dailyHealthLogs
+        case dailyOrderPlan
+        case criticalTasks
+        case upcomingDeadlines
+        case waitingResponses
+        case timeline
+        case universityClasses
+        case universityScheduleSessions
+        case moneyAccounts
+        case moneyTransactions
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
+        weightGoal = try container.decode(WeightGoal.self, forKey: .weightGoal)
+        weightLogs = try container.decode([WeightLog].self, forKey: .weightLogs)
+        dailyHealthLogs = try container.decode([DailyHealthLog].self, forKey: .dailyHealthLogs)
+        dailyOrderPlan = try container.decode(AIGeneratedDailyOrderPlan.self, forKey: .dailyOrderPlan)
+        criticalTasks = try container.decode([AcademicTask].self, forKey: .criticalTasks)
+        upcomingDeadlines = try container.decode([AcademicTask].self, forKey: .upcomingDeadlines)
+        waitingResponses = try container.decode([SimpleListItem].self, forKey: .waitingResponses)
+        timeline = try container.decode([SimpleListItem].self, forKey: .timeline)
+        universityClasses = try container.decodeIfPresent([UniversityClass].self, forKey: .universityClasses) ?? []
+        universityScheduleSessions = try container.decodeIfPresent([UniversityScheduleSession].self, forKey: .universityScheduleSessions) ?? []
+        moneyAccounts = try container.decode([MoneyAccount].self, forKey: .moneyAccounts)
+        moneyTransactions = try container.decode([MoneyTransaction].self, forKey: .moneyTransactions)
     }
 }
 

@@ -22,6 +22,8 @@ enum SupabaseSyncMapper {
             weightLogs: state.weightLogs.map { weightLogDTO(from: $0, ownerID: ownerID) },
             dailyHealthLogs: state.dailyHealthLogs.map { dailyHealthLogDTO(from: $0, ownerID: ownerID) },
             universityTasks: (state.criticalTasks + state.upcomingDeadlines).map { universityTaskDTO(from: $0, ownerID: ownerID) },
+            universityClasses: state.universityClasses.map { universityClassDTO(from: $0, ownerID: ownerID) },
+            universityScheduleSessions: state.universityScheduleSessions.map { universityScheduleSessionDTO(from: $0, ownerID: ownerID) },
             moneyAccounts: state.moneyAccounts.map { moneyAccountDTO(from: $0, ownerID: ownerID) },
             moneyTransactions: state.moneyTransactions.map { moneyTransactionDTO(from: $0, ownerID: ownerID) },
             dailyOrderPlan: dailyOrderPlanDTO(from: state.dailyOrderPlan, ownerID: ownerID),
@@ -65,6 +67,14 @@ enum SupabaseSyncMapper {
             upcomingDeadlines: tasks.filter { $0.priority != .critical }.sorted(by: sortAcademicTasks),
             waitingResponses: waitingResponses,
             timeline: timeline,
+            universityClasses: snapshot.universityClasses.map(universityClass(from:)).sorted { $0.name < $1.name },
+            universityScheduleSessions: snapshot.universityScheduleSessions.map(universityScheduleSession(from:)).sorted { lhs, rhs in
+                if lhs.weekday != rhs.weekday {
+                    return lhs.weekday < rhs.weekday
+                }
+
+                return lhs.startMinuteOfDay < rhs.startMinuteOfDay
+            },
             moneyAccounts: snapshot.moneyAccounts.map(moneyAccount(from:)).sorted { $0.name < $1.name },
             moneyTransactions: snapshot.moneyTransactions.map(moneyTransaction(from:)).sorted { $0.date > $1.date }
         )
@@ -225,6 +235,62 @@ private extension SupabaseSyncMapper {
             completedAt: dto.completedAt,
             notes: dto.notes,
             links: dto.links
+        )
+    }
+
+    static func universityClassDTO(from universityClass: UniversityClass, ownerID: EntityID) -> SupabaseUniversityClassDTO {
+        SupabaseUniversityClassDTO(
+            id: universityClass.id,
+            ownerID: ownerID,
+            name: universityClass.name,
+            shortName: universityClass.shortName,
+            instructor: universityClass.instructor,
+            location: universityClass.location,
+            color: universityClass.color?.rawValue,
+            status: universityClass.status.rawValue,
+            notes: universityClass.notes,
+            createdAt: universityClass.metadata.createdAt,
+            updatedAt: universityClass.metadata.updatedAt,
+            archivedAt: universityClass.metadata.archivedAt
+        )
+    }
+
+    static func universityClass(from dto: SupabaseUniversityClassDTO) -> UniversityClass {
+        UniversityClass(
+            metadata: metadata(from: dto),
+            name: dto.name,
+            shortName: dto.shortName,
+            instructor: dto.instructor,
+            location: dto.location,
+            color: dto.color.flatMap(UniversityClassColor.init(rawValue:)),
+            status: UniversityClassStatus(rawValue: dto.status) ?? .active,
+            notes: dto.notes
+        )
+    }
+
+    static func universityScheduleSessionDTO(from session: UniversityScheduleSession, ownerID: EntityID) -> SupabaseUniversityScheduleSessionDTO {
+        SupabaseUniversityScheduleSessionDTO(
+            id: session.id,
+            ownerID: ownerID,
+            classID: session.classID,
+            weekday: session.weekday.rawValue,
+            startMinuteOfDay: session.startMinuteOfDay,
+            endMinuteOfDay: session.endMinuteOfDay,
+            locationOverride: session.locationOverride,
+            createdAt: session.metadata.createdAt,
+            updatedAt: session.metadata.updatedAt,
+            archivedAt: session.metadata.archivedAt
+        )
+    }
+
+    static func universityScheduleSession(from dto: SupabaseUniversityScheduleSessionDTO) -> UniversityScheduleSession {
+        UniversityScheduleSession(
+            metadata: metadata(from: dto),
+            classID: dto.classID,
+            weekday: UniversityWeekday(rawValue: dto.weekday) ?? .monday,
+            startMinuteOfDay: dto.startMinuteOfDay,
+            endMinuteOfDay: dto.endMinuteOfDay,
+            locationOverride: dto.locationOverride
         )
     }
 
@@ -409,6 +475,14 @@ private extension SupabaseSyncMapper {
     }
 
     static func metadata(from dto: SupabaseUniversityTaskDTO) -> BaseMetadata {
+        BaseMetadata(id: dto.id, createdAt: dto.createdAt, updatedAt: dto.updatedAt, archivedAt: dto.archivedAt)
+    }
+
+    static func metadata(from dto: SupabaseUniversityClassDTO) -> BaseMetadata {
+        BaseMetadata(id: dto.id, createdAt: dto.createdAt, updatedAt: dto.updatedAt, archivedAt: dto.archivedAt)
+    }
+
+    static func metadata(from dto: SupabaseUniversityScheduleSessionDTO) -> BaseMetadata {
         BaseMetadata(id: dto.id, createdAt: dto.createdAt, updatedAt: dto.updatedAt, archivedAt: dto.archivedAt)
     }
 

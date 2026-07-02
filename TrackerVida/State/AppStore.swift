@@ -29,6 +29,9 @@ struct UniversityViewState {
     var upcomingDeadlines: [AcademicTask]
     var waitingResponses: [SimpleListItem]
     var timeline: [SimpleListItem]
+    var classes: [UniversityClass]
+    var todayClasses: [UniversityScheduledClass]
+    var upcomingClassesThisWeek: [UniversityScheduledClass]
 }
 
 struct MoneyViewState {
@@ -97,6 +100,8 @@ final class AppStore: ObservableObject {
     @Published var upcomingDeadlines: [AcademicTask]
     @Published var waitingResponses: [SimpleListItem]
     @Published var timeline: [SimpleListItem]
+    @Published var universityClasses: [UniversityClass]
+    @Published var universityScheduleSessions: [UniversityScheduleSession]
     @Published var moneyAccounts: [MoneyAccount]
     @Published var moneyTransactions: [MoneyTransaction]
     @Published var settingsSections: [SimpleListItem]
@@ -120,6 +125,8 @@ final class AppStore: ObservableObject {
         upcomingDeadlines: [AcademicTask] = MockData.upcomingDeadlines,
         waitingResponses: [SimpleListItem] = MockData.waitingResponses,
         timeline: [SimpleListItem] = MockData.timeline,
+        universityClasses: [UniversityClass] = MockData.universityClasses,
+        universityScheduleSessions: [UniversityScheduleSession] = MockData.universityScheduleSessions,
         moneyAccounts: [MoneyAccount] = MockData.moneyAccounts,
         moneyTransactions: [MoneyTransaction] = MockData.moneyTransactions,
         settingsSections: [SimpleListItem] = MockData.settingsSections,
@@ -152,6 +159,8 @@ final class AppStore: ObservableObject {
             self.upcomingDeadlines = restoredState.upcomingDeadlines
             self.waitingResponses = restoredState.waitingResponses
             self.timeline = restoredState.timeline
+            self.universityClasses = restoredState.universityClasses
+            self.universityScheduleSessions = restoredState.universityScheduleSessions
             self.moneyAccounts = restoredState.moneyAccounts
             self.moneyTransactions = restoredState.moneyTransactions
             self.settingsSections = settingsSections
@@ -167,6 +176,8 @@ final class AppStore: ObservableObject {
         self.upcomingDeadlines = upcomingDeadlines
         self.waitingResponses = waitingResponses
         self.timeline = timeline
+        self.universityClasses = universityClasses
+        self.universityScheduleSessions = universityScheduleSessions
         self.moneyAccounts = moneyAccounts
         self.moneyTransactions = moneyTransactions
         self.settingsSections = settingsSections
@@ -207,7 +218,10 @@ final class AppStore: ObservableObject {
             activeCriticalTasks: activeCriticalTasks,
             upcomingDeadlines: activeUpcomingDeadlines,
             waitingResponses: waitingTaskItems + waitingResponses,
-            timeline: timeline
+            timeline: timeline,
+            classes: activeUniversityClasses,
+            todayClasses: todayUniversityClasses,
+            upcomingClassesThisWeek: upcomingUniversityClassesThisWeek
         )
     }
 
@@ -570,6 +584,127 @@ final class AppStore: ObservableObject {
         updateAcademicTaskStatus(taskID, status: .completed)
     }
 
+    @discardableResult
+    func addUniversityClass(
+        name: String,
+        shortName: String? = nil,
+        instructor: String? = nil,
+        location: String? = nil,
+        color: UniversityClassColor? = .university,
+        notes: String? = nil,
+        createdAt: Date = .now
+    ) -> UniversityClass {
+        let universityClass = UniversityClass(
+            metadata: BaseMetadata(createdAt: createdAt, updatedAt: createdAt),
+            name: normalizedRequiredText(name, fallback: "Class"),
+            shortName: normalizedOptionalText(shortName),
+            instructor: normalizedOptionalText(instructor),
+            location: normalizedOptionalText(location),
+            color: color,
+            status: .active,
+            notes: normalizedOptionalText(notes)
+        )
+
+        universityClasses.append(universityClass)
+        universityClasses = sortedUniversityClasses(universityClasses)
+        saveState()
+        return universityClass
+    }
+
+    func updateUniversityClass(_ updatedClass: UniversityClass, updatedAt: Date = .now) {
+        guard let index = universityClasses.firstIndex(where: { $0.id == updatedClass.id }) else { return }
+
+        var universityClass = normalizedUniversityClass(updatedClass, timestamp: updatedAt)
+        universityClass.metadata.updatedAt = updatedAt
+        universityClasses[index] = universityClass
+        universityClasses = sortedUniversityClasses(universityClasses)
+        saveState()
+    }
+
+    func archiveUniversityClass(_ classID: EntityID, updatedAt: Date = .now) {
+        guard var universityClass = universityClass(id: classID) else { return }
+
+        universityClass.status = .archived
+        updateUniversityClass(universityClass, updatedAt: updatedAt)
+    }
+
+    func universityClass(id classID: EntityID) -> UniversityClass? {
+        universityClasses.first { $0.id == classID }
+    }
+
+    @discardableResult
+    func addUniversityScheduleSession(
+        classID: EntityID,
+        weekday: UniversityWeekday,
+        startMinuteOfDay: Int,
+        endMinuteOfDay: Int,
+        locationOverride: String? = nil,
+        createdAt: Date = .now
+    ) -> UniversityScheduleSession? {
+        guard universityClass(id: classID) != nil else { return nil }
+
+        let session = normalizedUniversityScheduleSession(
+            UniversityScheduleSession(
+                metadata: BaseMetadata(createdAt: createdAt, updatedAt: createdAt),
+                classID: classID,
+                weekday: weekday,
+                startMinuteOfDay: startMinuteOfDay,
+                endMinuteOfDay: endMinuteOfDay,
+                locationOverride: locationOverride
+            ),
+            timestamp: createdAt
+        )
+
+        universityScheduleSessions.append(session)
+        universityScheduleSessions = sortedUniversityScheduleSessions(universityScheduleSessions)
+        saveState()
+        return session
+    }
+
+    func updateUniversityScheduleSession(_ updatedSession: UniversityScheduleSession, updatedAt: Date = .now) {
+        guard universityClass(id: updatedSession.classID) != nil,
+              let index = universityScheduleSessions.firstIndex(where: { $0.id == updatedSession.id })
+        else {
+            return
+        }
+
+        var session = normalizedUniversityScheduleSession(updatedSession, timestamp: updatedAt)
+        session.metadata.updatedAt = updatedAt
+        universityScheduleSessions[index] = session
+        universityScheduleSessions = sortedUniversityScheduleSessions(universityScheduleSessions)
+        saveState()
+    }
+
+    func todayClasses(on date: Date? = nil) -> [UniversityScheduledClass] {
+        scheduledClasses(on: date ?? currentDate)
+    }
+
+    func upcomingClassesThisWeek(from date: Date? = nil) -> [UniversityScheduledClass] {
+        let referenceDate = date ?? currentDate
+        let referenceWeekday = weekday(for: referenceDate)
+
+        return activeScheduleSessions
+            .compactMap { session -> UniversityScheduledClass? in
+                guard let universityClass = universityClass(id: session.classID),
+                      let occurrenceDate = nextOccurrenceDate(for: session.weekday, referenceDate: referenceDate, referenceWeekday: referenceWeekday)
+                else {
+                    return nil
+                }
+
+                return UniversityScheduledClass(session: session, universityClass: universityClass, occurrenceDate: occurrenceDate)
+            }
+            .filter { scheduledClass in
+                let dayOffset = calendar.dateComponents(
+                    [.day],
+                    from: calendar.startOfDay(for: referenceDate),
+                    to: calendar.startOfDay(for: scheduledClass.occurrenceDate)
+                ).day ?? 0
+
+                return dayOffset >= 0 && dayOffset < 7
+            }
+            .sorted(by: sortScheduledClasses)
+    }
+
     private var allUniversityTasks: [AcademicTask] {
         criticalTasks + upcomingDeadlines
     }
@@ -663,6 +798,38 @@ final class AppStore: ObservableObject {
         )
     }
 
+    private var activeUniversityClasses: [UniversityClass] {
+        sortedUniversityClasses(universityClasses.filter { $0.status == .active })
+    }
+
+    private var activeScheduleSessions: [UniversityScheduleSession] {
+        sortedUniversityScheduleSessions(
+            universityScheduleSessions.filter { session in
+                universityClass(id: session.classID)?.status == .active
+            }
+        )
+    }
+
+    private var todayUniversityClasses: [UniversityScheduledClass] {
+        todayClasses()
+    }
+
+    private var upcomingUniversityClassesThisWeek: [UniversityScheduledClass] {
+        upcomingClassesThisWeek()
+    }
+
+    private func scheduledClasses(on date: Date) -> [UniversityScheduledClass] {
+        let targetWeekday = weekday(for: date)
+
+        return activeScheduleSessions
+            .filter { $0.weekday == targetWeekday }
+            .compactMap { session in
+                guard let universityClass = universityClass(id: session.classID) else { return nil }
+                return UniversityScheduledClass(session: session, universityClass: universityClass, occurrenceDate: calendar.startOfDay(for: date))
+            }
+            .sorted(by: sortScheduledClasses)
+    }
+
     private var waitingTaskItems: [SimpleListItem] {
         sortedUniversityTasks(
             allUniversityTasks.filter { !$0.isComplete && $0.status == .waitingResponse }
@@ -695,6 +862,29 @@ final class AppStore: ObservableObject {
         return task
     }
 
+    private func normalizedUniversityClass(_ universityClass: UniversityClass, timestamp: Date) -> UniversityClass {
+        var universityClass = universityClass
+        universityClass.name = normalizedRequiredText(universityClass.name, fallback: "Class")
+        universityClass.shortName = normalizedOptionalText(universityClass.shortName)
+        universityClass.instructor = normalizedOptionalText(universityClass.instructor)
+        universityClass.location = normalizedOptionalText(universityClass.location)
+        universityClass.notes = normalizedOptionalText(universityClass.notes)
+        universityClass.metadata.updatedAt = timestamp
+        return universityClass
+    }
+
+    private func normalizedUniversityScheduleSession(_ session: UniversityScheduleSession, timestamp: Date) -> UniversityScheduleSession {
+        var session = session
+        session.startMinuteOfDay = min(clampedMinuteOfDay(session.startMinuteOfDay), (24 * 60) - 2)
+        session.endMinuteOfDay = clampedMinuteOfDay(session.endMinuteOfDay)
+        if session.endMinuteOfDay <= session.startMinuteOfDay {
+            session.endMinuteOfDay = min(session.startMinuteOfDay + 60, (24 * 60) - 1)
+        }
+        session.locationOverride = normalizedOptionalText(session.locationOverride)
+        session.metadata.updatedAt = timestamp
+        return session
+    }
+
     private func insertUniversityTask(_ task: AcademicTask) {
         if task.priority == .critical {
             criticalTasks.append(task)
@@ -723,6 +913,56 @@ final class AppStore: ObservableObject {
                 return lhs.metadata.createdAt < rhs.metadata.createdAt
             }
         }
+    }
+
+    private func sortedUniversityClasses(_ classes: [UniversityClass]) -> [UniversityClass] {
+        classes.sorted { lhs, rhs in
+            if lhs.status != rhs.status {
+                return lhs.status == .active
+            }
+
+            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+        }
+    }
+
+    private func sortedUniversityScheduleSessions(_ sessions: [UniversityScheduleSession]) -> [UniversityScheduleSession] {
+        sessions.sorted { lhs, rhs in
+            if lhs.weekday != rhs.weekday {
+                return lhs.weekday < rhs.weekday
+            }
+
+            if lhs.startMinuteOfDay != rhs.startMinuteOfDay {
+                return lhs.startMinuteOfDay < rhs.startMinuteOfDay
+            }
+
+            return lhs.metadata.createdAt < rhs.metadata.createdAt
+        }
+    }
+
+    private func sortScheduledClasses(_ lhs: UniversityScheduledClass, _ rhs: UniversityScheduledClass) -> Bool {
+        if lhs.occurrenceDate != rhs.occurrenceDate {
+            return lhs.occurrenceDate < rhs.occurrenceDate
+        }
+
+        if lhs.session.startMinuteOfDay != rhs.session.startMinuteOfDay {
+            return lhs.session.startMinuteOfDay < rhs.session.startMinuteOfDay
+        }
+
+        return lhs.universityClass.name.localizedCaseInsensitiveCompare(rhs.universityClass.name) == .orderedAscending
+    }
+
+    private func weekday(for date: Date) -> UniversityWeekday {
+        let weekday = calendar.component(.weekday, from: date)
+        return UniversityWeekday(rawValue: weekday) ?? .monday
+    }
+
+    private func nextOccurrenceDate(for weekday: UniversityWeekday, referenceDate: Date, referenceWeekday: UniversityWeekday) -> Date? {
+        let dayOffset = (weekday.rawValue - referenceWeekday.rawValue + 7) % 7
+        return calendar.date(byAdding: .day, value: dayOffset, to: calendar.startOfDay(for: referenceDate))
+    }
+
+    private func clampedMinuteOfDay(_ minute: Int) -> Int {
+        min(max(minute, 0), (24 * 60) - 1)
     }
 
     private func normalizedOptionalText(_ text: String?) -> String? {
@@ -762,6 +1002,8 @@ final class AppStore: ObservableObject {
             upcomingDeadlines: upcomingDeadlines,
             waitingResponses: waitingResponses,
             timeline: timeline,
+            universityClasses: universityClasses,
+            universityScheduleSessions: universityScheduleSessions,
             moneyAccounts: moneyAccounts,
             moneyTransactions: moneyTransactions
         )
