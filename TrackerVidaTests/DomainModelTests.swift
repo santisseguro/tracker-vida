@@ -15,6 +15,160 @@ final class DomainModelTests: XCTestCase {
         XCTAssertEqual(command.confirmationText, "Captured for Money")
     }
 
+    func testAIAssistantRequestAndResultEncodeDecode() throws {
+        let request = AIAssistantRequest(
+            id: EntityID(uuidString: "00000000-0000-0000-0000-00000000A101")!,
+            section: .university,
+            text: "  What classes do I have tomorrow?  ",
+            createdAt: MockData.today
+        )
+        let proposedAction = AIActionIntent(
+            section: .university,
+            actionName: "add_task",
+            arguments: ["title": "Read chapter"],
+            requiresConfirmation: true,
+            confidence: 0.7
+        )
+        let followUp = AIPendingFollowUpIntent(
+            id: EntityID(uuidString: "00000000-0000-0000-0000-00000000A102")!,
+            section: .university,
+            originalText: request.text,
+            prompt: "What deadline should I use?",
+            missingFields: ["dueDate"],
+            proposedAction: proposedAction,
+            createdAt: MockData.today
+        )
+        let result = AIAssistantResult(
+            id: EntityID(uuidString: "00000000-0000-0000-0000-00000000A103")!,
+            requestID: request.id,
+            section: request.section,
+            intent: .pendingFollowUp(followUp),
+            response: "What deadline should I use?",
+            requiresFollowUp: true,
+            providerResponse: .localStub,
+            createdAt: MockData.today
+        )
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        let decodedRequest = try decoder.decode(AIAssistantRequest.self, from: encoder.encode(request))
+        let decodedResult = try decoder.decode(AIAssistantResult.self, from: encoder.encode(result))
+
+        XCTAssertEqual(decodedRequest.text, "What classes do I have tomorrow?")
+        XCTAssertEqual(decodedResult.intent.kind, .pendingFollowUp)
+        XCTAssertEqual(decodedResult.providerResponse, .localStub)
+
+        guard case .pendingFollowUp(let decodedFollowUp) = decodedResult.intent else {
+            return XCTFail("Expected pending follow-up intent")
+        }
+
+        XCTAssertEqual(decodedFollowUp.missingFields, ["dueDate"])
+        XCTAssertEqual(decodedFollowUp.proposedAction?.actionName, "add_task")
+    }
+
+    func testAIAssistantIntentDistinguishesReadOnlyAndAction() {
+        let question = AIAssistantIntent.readOnlyQuestion(
+            AIReadOnlyQuestionIntent(
+                section: .gymHealth,
+                question: "Am I on track?",
+                topic: .healthProgress
+            )
+        )
+        let action = AIAssistantIntent.action(
+            AIActionIntent(
+                section: .money,
+                actionName: "add_expense",
+                arguments: ["amount": "12000"],
+                requiresConfirmation: false
+            )
+        )
+
+        XCTAssertEqual(question.kind, .readOnlyQuestion)
+        XCTAssertEqual(action.kind, .action)
+    }
+
+    func testAIAssistantPendingFollowUpRepresentation() {
+        let action = AIActionIntent(
+            section: .money,
+            actionName: "add_transfer",
+            arguments: ["amount": "50", "currency": "USDT"],
+            requiresConfirmation: true
+        )
+        let followUp = AIPendingFollowUpIntent(
+            section: .money,
+            originalText: "Transfer 50 USDT",
+            prompt: "Which destination account should I use?",
+            missingFields: ["toAccountID"],
+            proposedAction: action,
+            createdAt: MockData.today
+        )
+        let intent = AIAssistantIntent.pendingFollowUp(followUp)
+
+        XCTAssertEqual(intent.kind, .pendingFollowUp)
+        XCTAssertEqual(followUp.section, .money)
+        XCTAssertEqual(followUp.proposedAction?.requiresConfirmation, true)
+        XCTAssertEqual(followUp.missingFields, ["toAccountID"])
+    }
+
+    @MainActor
+    func testAIAssistantUniversityContextBuilderReturnsClassesAndTasks() {
+        let store = AppStore(currentDate: MockData.today)
+        let context = AIAssistantContextBuilder.universityContext(from: store)
+
+        XCTAssertEqual(context.section, .university)
+        XCTAssertNil(context.money)
+        XCTAssertEqual(context.university?.classes.map(\.id), store.universityState.classes.map(\.id))
+        XCTAssertEqual(context.university?.activeCriticalTasks.count, store.universityState.activeCriticalTasks.count)
+        XCTAssertTrue(context.university?.todayClasses.contains { $0.classID == MockData.algebraClassID } == true)
+        XCTAssertTrue(context.university?.upcomingClassesThisWeek.contains { $0.classID == MockData.programmingClassID } == true)
+    }
+
+    @MainActor
+    func testAIAssistantHealthContextBuilderReturnsProgressAndOrder() {
+        let store = AppStore(currentDate: MockData.today)
+        let context = AIAssistantContextBuilder.gymHealthContext(from: store)
+        let healthContext = context.gymHealth
+
+        XCTAssertEqual(context.section, .gymHealth)
+        XCTAssertEqual(healthContext?.currentWeightKg, store.gymHealthState.progress.currentWeightKg)
+        XCTAssertEqual(healthContext?.targetWeightKg, MockData.weightGoal.targetWeightKg)
+        XCTAssertEqual(healthContext?.trackStatus, store.gymHealthState.progress.trackStatus)
+        XCTAssertEqual(healthContext?.dailyOrderTitle, store.gymHealthState.dailyOrderPlan.orders.first?.title)
+        XCTAssertEqual(healthContext?.checklistItems.count, store.gymHealthState.dailyOrderPlan.orders.flatMap(\.checklist).count)
+    }
+
+    @MainActor
+    func testAIAssistantMoneyContextBuilderReturnsAccountsAndTransactions() {
+        let store = AppStore(currentDate: MockData.today)
+        let context = AIAssistantContextBuilder.moneyContext(from: store)
+        let moneyContext = context.money
+
+        XCTAssertEqual(context.section, .money)
+        XCTAssertEqual(moneyContext?.accounts.map(\.id), store.moneyState.activeAccounts.map(\.id))
+        XCTAssertEqual(moneyContext?.recentTransactions.map(\.id), Array(store.moneyState.transactions.prefix(12)).map(\.id))
+        XCTAssertEqual(moneyContext?.totals.arsMinorUnits, store.moneyState.totals.arsMinorUnits)
+        XCTAssertEqual(moneyContext?.totals.usdtMinorUnits, store.moneyState.totals.usdtMinorUnits)
+    }
+
+    @MainActor
+    func testLocalAIAssistantServiceReturnsReadOnlyStubResult() async {
+        let store = AppStore(currentDate: MockData.today)
+        let context = AIAssistantContextBuilder.dashboardContext(from: store)
+        let request = AIAssistantRequest(section: .dashboard, text: "What should I do today?", createdAt: MockData.today)
+        let service = LocalAIAssistantService()
+
+        let result = await service.respond(to: request, context: context)
+
+        XCTAssertEqual(result.requestID, request.id)
+        XCTAssertEqual(result.intent.kind, .readOnlyQuestion)
+        XCTAssertEqual(result.providerResponse, .localStub)
+        XCTAssertFalse(result.requiresFollowUp)
+        XCTAssertTrue(result.response.contains("Local assistant foundation"))
+    }
+
     @MainActor
     func testStoreCapturesAICommandsInMemoryByContext() {
         let store = AppStore(currentDate: MockData.today)
