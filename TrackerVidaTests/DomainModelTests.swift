@@ -424,6 +424,122 @@ final class DomainModelTests: XCTestCase {
         XCTAssertTrue(lastAssistantMessage(in: conversation).contains("Ajusté"))
     }
 
+    @MainActor
+    func testQAMoneyAIExpenseWithExistingAccountUpdatesStatePersistenceAndChart() throws {
+        let persistence = InMemoryAppStatePersistence(state: nil)
+        let store = AppStore(currentDate: MockData.today, persistence: persistence)
+        var conversation = MoneyConversationState()
+
+        MoneyConversationEngine.handle("Gasté 12000 pesos en comida desde Banco ARS", state: &conversation, store: store, date: MockData.today)
+
+        let transaction = try XCTUnwrap(store.moneyTransactions.first)
+        XCTAssertEqual(transaction.kind, .expense)
+        XCTAssertEqual(transaction.amount.minorUnits, 12_000)
+        XCTAssertEqual(transaction.amount.currency, .ars)
+        XCTAssertEqual(transaction.fromAccountID, MockData.accountBankARS)
+        XCTAssertEqual(transaction.category?.label, "Comida")
+        XCTAssertEqual(store.moneyAccount(id: MockData.accountBankARS)?.currentBalance.minorUnits, 406_900)
+        XCTAssertEqual(store.dashboardState.moneyTotals.arsMinorUnits, 489_300)
+        XCTAssertEqual(conversation.latestAssistantResponse, lastAssistantMessage(in: conversation))
+        XCTAssertTrue(lastAssistantMessage(in: conversation).contains("registré el gasto"))
+        XCTAssertEqual(persistence.savedStates.last?.moneyAccounts.first { $0.id == MockData.accountBankARS }?.currentBalance.minorUnits, 406_900)
+        XCTAssertEqual(todayTrendBalance(for: MockData.accountBankARS, in: store), 406_900)
+    }
+
+    @MainActor
+    func testQAMoneyAIIncomeWithExistingAccountUpdatesBalances() throws {
+        let store = AppStore(currentDate: MockData.today)
+        var conversation = MoneyConversationState()
+
+        MoneyConversationEngine.handle("Me entraron 500000 pesos en Banco ARS por trabajo", state: &conversation, store: store, date: MockData.today)
+
+        let transaction = try XCTUnwrap(store.moneyTransactions.first)
+        XCTAssertEqual(transaction.kind, .income)
+        XCTAssertEqual(transaction.amount.minorUnits, 500_000)
+        XCTAssertEqual(transaction.toAccountID, MockData.accountBankARS)
+        XCTAssertEqual(transaction.category?.label, "Trabajo")
+        XCTAssertEqual(store.moneyAccount(id: MockData.accountBankARS)?.currentBalance.minorUnits, 918_900)
+        XCTAssertEqual(store.dashboardState.moneyTotals.arsMinorUnits, 1_001_300)
+        XCTAssertTrue(lastAssistantMessage(in: conversation).contains("registré el ingreso"))
+    }
+
+    @MainActor
+    func testQAMoneyAITransferWithExistingAccountsUpdatesBalancesDashboardAndChart() throws {
+        let persistence = InMemoryAppStatePersistence(state: nil)
+        let store = AppStore(currentDate: MockData.today, persistence: persistence)
+        var conversation = MoneyConversationState()
+
+        MoneyConversationEngine.handle("Transferí 50 USDT de USDT Wallet a Banco ARS", state: &conversation, store: store, date: MockData.today)
+
+        let transaction = try XCTUnwrap(store.moneyTransactions.first)
+        XCTAssertEqual(transaction.kind, .transfer)
+        XCTAssertEqual(transaction.amount.minorUnits, 50)
+        XCTAssertEqual(transaction.amount.currency, .usdt)
+        XCTAssertEqual(transaction.fromAccountID, MockData.accountUSDT)
+        XCTAssertEqual(transaction.toAccountID, MockData.accountBankARS)
+        XCTAssertEqual(store.moneyAccount(id: MockData.accountUSDT)?.currentBalance.minorUnits, 1_190)
+        XCTAssertEqual(store.moneyAccount(id: MockData.accountBankARS)?.currentBalance.minorUnits, 468_900)
+        XCTAssertEqual(store.dashboardState.moneyTotals.arsMinorUnits, 551_300)
+        XCTAssertEqual(store.dashboardState.moneyTotals.usdtMinorUnits, 1_190)
+        XCTAssertEqual(store.dashboardState.moneyTotals.arsEquivalentMinorUnits, 1_741_300)
+        XCTAssertTrue(lastAssistantMessage(in: conversation).contains("Transferí"))
+        XCTAssertEqual(persistence.savedStates.last?.moneyTransactions.first?.kind, .transfer)
+        XCTAssertEqual(todayTrendBalance(for: MockData.accountUSDT, in: store), 1_190)
+        XCTAssertEqual(todayTrendBalance(for: MockData.accountBankARS, in: store), 468_900)
+    }
+
+    @MainActor
+    func testQAMoneyAIBalanceAdjustmentUpdatesDifferenceAndPersistence() throws {
+        let persistence = InMemoryAppStatePersistence(state: nil)
+        let store = AppStore(currentDate: MockData.today, persistence: persistence)
+        var conversation = MoneyConversationState()
+
+        MoneyConversationEngine.handle("Mi saldo real en Banco ARS es 82500 pesos", state: &conversation, store: store, date: MockData.today)
+
+        let transaction = try XCTUnwrap(store.moneyTransactions.first)
+        XCTAssertEqual(transaction.kind, .balanceAdjustment)
+        XCTAssertEqual(transaction.amount.minorUnits, -336_400)
+        XCTAssertEqual(transaction.balanceBefore?.minorUnits, 418_900)
+        XCTAssertEqual(transaction.balanceAfter?.minorUnits, 82_500)
+        XCTAssertEqual(store.moneyAccount(id: MockData.accountBankARS)?.currentBalance.minorUnits, 82_500)
+        XCTAssertEqual(store.dashboardState.moneyTotals.arsMinorUnits, 164_900)
+        XCTAssertTrue(lastAssistantMessage(in: conversation).contains("Ajusté"))
+        XCTAssertEqual(persistence.savedStates.last?.moneyAccounts.first { $0.id == MockData.accountBankARS }?.currentBalance.minorUnits, 82_500)
+    }
+
+    @MainActor
+    func testQAMoneyAIUnknownAccountFollowUpCreatesAccountCompletesPendingExpenseAndPersists() throws {
+        let persistence = InMemoryAppStatePersistence(state: nil)
+        let store = AppStore(currentDate: MockData.today, persistence: persistence)
+        var conversation = MoneyConversationState()
+
+        MoneyConversationEngine.handle("Gasté 1000 pesos en Ualá", state: &conversation, store: store, date: MockData.today)
+        XCTAssertTrue(lastAssistantMessage(in: conversation).contains("¿Querés crearla?"))
+        guard case .createAccountConfirmation(.from, "Ualá") = conversation.pendingCommand?.step else {
+            return XCTFail("Expected unknown account confirmation")
+        }
+
+        MoneyConversationEngine.handle("sí, creala", state: &conversation, store: store, date: MockData.today)
+        XCTAssertTrue(lastAssistantMessage(in: conversation).contains("saldo inicial"))
+        guard case .initialBalance(.from, "Ualá") = conversation.pendingCommand?.step else {
+            return XCTFail("Expected initial balance prompt")
+        }
+
+        MoneyConversationEngine.handle("50000 pesos", state: &conversation, store: store, date: MockData.today)
+
+        let account = try XCTUnwrap(store.moneyAccounts.first { $0.name == "Ualá" })
+        XCTAssertEqual(account.currentBalance.minorUnits, 49_000)
+        XCTAssertEqual(store.moneyTransactions.first?.kind, .expense)
+        XCTAssertEqual(store.moneyTransactions.first?.fromAccountID, account.id)
+        XCTAssertNil(conversation.pendingCommand)
+        XCTAssertTrue(lastAssistantMessage(in: conversation).contains("Creé Ualá"))
+        XCTAssertTrue(lastAssistantMessage(in: conversation).contains("registré el gasto"))
+        XCTAssertEqual(conversation.latestAssistantResponse, lastAssistantMessage(in: conversation))
+        XCTAssertEqual(store.dashboardState.moneyTotals.arsMinorUnits, 550_300)
+        XCTAssertEqual(persistence.savedStates.last?.moneyAccounts.first { $0.name == "Ualá" }?.currentBalance.minorUnits, 49_000)
+        XCTAssertEqual(todayTrendBalance(for: account.id, in: store), 49_000)
+    }
+
     func testDailyOrderCompletionRatio() {
         XCTAssertEqual(MockData.dailyOrderPlan.completionRatio, 0)
         XCTAssertEqual(MockData.dailyOrderPlan.orders.first?.checklist.count, 3)
@@ -1163,6 +1279,21 @@ private func parsedMoneyCommand(_ text: String) -> MoneyCommandDraft? {
 
 private func lastAssistantMessage(in conversation: MoneyConversationState) -> String {
     conversation.messages.last { $0.role == .assistant }?.text ?? ""
+}
+
+@MainActor
+private func todayTrendBalance(for accountID: EntityID, in store: AppStore) -> Int? {
+    MoneyBalanceTrendCalculator.points(
+        accounts: store.moneyState.activeAccounts,
+        transactions: store.moneyState.transactions,
+        referenceDate: store.currentDate,
+        usdtToARSRate: store.moneyState.totals.mockUSDTToARSRate,
+        range: .daily,
+        calendar: MockData.calendar
+    )
+    .filter { $0.accountID == accountID && MockData.calendar.isDate($0.date, inSameDayAs: MockData.today) }
+    .last?
+    .balanceMinorUnits
 }
 
 private extension MoneyCommandDraft {
